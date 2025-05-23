@@ -26,31 +26,36 @@ export function LoginScreen() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <Card className="w-full max-w-md shadow-lg">
+    <div className="min-h-screen flex items-center justify-center bg-black">
+      <Card className="w-full max-w-md shadow-lg bg-zinc-900 border-zinc-800">
         <CardHeader className="space-y-1 text-center">
           <div className="flex justify-center mb-4">
-            <div className="bg-primary/10 p-3 rounded-full">
-              <Package className="h-10 w-10 text-primary" />
+            <div className="bg-zinc-800 p-3 rounded-full">
+              <Package className="h-10 w-10 text-white" />
             </div>
           </div>
-          <CardTitle className="text-2xl font-bold">ShadyPedidos</CardTitle>
-          <CardDescription>Entre com suas credenciais para acessar o sistema</CardDescription>
+          <CardTitle className="text-2xl font-bold text-white">ShadyPedidos</CardTitle>
+          <CardDescription className="text-zinc-400">Entre com suas credenciais para acessar o sistema</CardDescription>
         </CardHeader>
         <form onSubmit={handleSubmit}>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="username">Usuário</Label>
+              <Label htmlFor="username" className="text-zinc-300">
+                Usuário
+              </Label>
               <Input
                 id="username"
                 placeholder="Seu nome de usuário"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 required
+                className="bg-zinc-800 border-zinc-700 text-white placeholder:text-zinc-500"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">Senha</Label>
+              <Label htmlFor="password" className="text-zinc-300">
+                Senha
+              </Label>
               <Input
                 id="password"
                 type="password"
@@ -58,6 +63,7 @@ export function LoginScreen() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
+                className="bg-zinc-800 border-zinc-700 text-white placeholder:text-zinc-500"
               />
             </div>
           </CardContent>
@@ -75,6 +81,9 @@ export function LoginScreen() {
           </CardFooter>
         </form>
       </Card>
+
+      {/* Instagram link no canto inferior direito */}
+      <div className="fixed bottom-4 right-4 text-zinc-400 text-sm">instagram:@dev.shady</div>
     </div>
   )
 }

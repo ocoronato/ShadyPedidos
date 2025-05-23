@@ -1080,26 +1080,32 @@ function ShadyPedidosApp() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <header className="bg-white shadow-sm border-b">
+      <header className="bg-black shadow-sm border-zinc-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-2">
-              <Package className="h-8 w-8 text-primary" />
-              <h1 className="text-2xl font-bold text-gray-900">ShadyPedidos</h1>
+              <Package className="h-8 w-8 text-white" />
+              <h1 className="text-2xl font-bold text-white italic">SHADY</h1>
             </div>
 
             <div className="flex items-center space-x-4">
               {/* User Info */}
               <div className="hidden md:flex items-center space-x-1 text-sm">
-                <User className="h-4 w-4 text-gray-500" />
-                <span className="text-gray-700">{user.name}</span>
+                <User className="h-4 w-4 text-zinc-400" />
+                <span className="text-zinc-300">{user.name}</span>
                 <Badge variant="outline" className="ml-2">
                   {user.role === "admin" ? "Admin" : "Usuário"}
                 </Badge>
               </div>
 
               {/* Logout Button */}
-              <Button variant="ghost" size="sm" onClick={logout} title="Sair">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={logout}
+                title="Sair"
+                className="text-zinc-300 hover:text-white hover:bg-zinc-800"
+              >
                 <LogOut className="h-4 w-4" />
                 <span className="ml-2 hidden md:inline">Sair</span>
               </Button>
@@ -1108,7 +1114,7 @@ function ShadyPedidosApp() {
 
           {/* Navigation Tabs */}
           <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as ActiveTab)} className="w-auto mt-2">
-            <TabsList className="grid w-full grid-cols-5">
+            <TabsList className="grid w-full grid-cols-5 bg-zinc-900">
               <TabsTrigger value="novo-pedido" className="flex items-center space-x-2">
                 <Plus className="h-4 w-4" />
                 <span>Novo Pedido</span>
