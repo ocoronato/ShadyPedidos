@@ -114,7 +114,7 @@ function ShadyPedidosApp() {
       totalQuantity: number
     }>
   >([])
-  const [notes, setNotes] = useState("")
+  const [notes, setNotes] = useState("Previsão de entrega xx/xx/xxxx\nCondição de pagamento xx-xx-xx")
 
   const [isEditOrderDialogOpen, setIsEditOrderDialogOpen] = useState(false)
   const [editingOrder, setEditingOrder] = useState<Order | null>(null)
@@ -421,6 +421,8 @@ function ShadyPedidosApp() {
       loadCustomers()
       loadProducts()
       loadOrders()
+      // Inicializar observações com texto padrão
+      setNotes("Previsão de entrega xx/xx/xxxx\nCondição de pagamento xx-xx-xx")
     }
   }, [user])
 
@@ -518,7 +520,7 @@ function ShadyPedidosApp() {
       setSelectedProductId("")
       setSizeQuantities({})
       setOrderItems([])
-      setNotes("")
+      setNotes("Previsão de entrega xx/xx/xxxx\nCondição de pagamento xx-xx-xx")
 
       // Reload orders
       await loadOrders()
@@ -1093,7 +1095,7 @@ function ShadyPedidosApp() {
               <div className="hidden md:flex items-center space-x-1 text-sm">
                 <User className="h-4 w-4 text-zinc-400" />
                 <span className="text-zinc-300">{user.name}</span>
-                <Badge variant="outline" className="ml-2">
+                <Badge variant="outline" className="ml-2 text-white border-zinc-600">
                   {user.role === "admin" ? "Admin" : "Usuário"}
                 </Badge>
               </div>
