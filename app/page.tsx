@@ -1438,7 +1438,9 @@ function ShadyPedidosApp() {
                         <div className="flex-1">
                           <CardTitle className="text-lg flex items-center gap-2">
                             {product.referencia}
-                            <Badge variant="outline">ID: {product.id}</Badge>
+                            <Badge variant="outline" className="text-white border-zinc-600">
+                              ID: {product.id}
+                            </Badge>
                           </CardTitle>
                           <CardDescription className="text-zinc-400">
                             Cadastrado em {new Date(product.created_at).toLocaleDateString("pt-BR")}
