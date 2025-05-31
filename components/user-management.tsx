@@ -225,8 +225,8 @@ export function UserManagement() {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="text-center">
-          <User className="h-12 w-12 text-gray-400 mx-auto mb-4 animate-pulse" />
-          <p className="text-gray-500">Carregando usuários...</p>
+          <User className="h-12 w-12 text-zinc-400 mx-auto mb-4 animate-pulse" />
+          <p className="text-zinc-400">Carregando usuários...</p>
         </div>
       </div>
     )
@@ -235,8 +235,8 @@ export function UserManagement() {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold text-gray-900">Usuários ({users.length})</h2>
-        <Button onClick={() => setIsCreateUserDialogOpen(true)}>
+        <h2 className="text-2xl font-bold text-white">Usuários ({users.length})</h2>
+        <Button className="bg-zinc-700 hover:bg-zinc-600" onClick={() => setIsCreateUserDialogOpen(true)}>
           <UserPlus className="h-4 w-4 mr-2" />
           Cadastrar Usuário
         </Button>
@@ -244,10 +244,10 @@ export function UserManagement() {
 
       {users.length === 0 ? (
         <div className="text-center py-12">
-          <User className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">Nenhum usuário encontrado</h3>
-          <p className="text-gray-500 mb-4">Comece cadastrando seu primeiro usuário.</p>
-          <Button onClick={() => setIsCreateUserDialogOpen(true)}>
+          <User className="h-12 w-12 text-zinc-400 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-white mb-2">Nenhum usuário encontrado</h3>
+          <p className="text-zinc-400 mb-4">Comece cadastrando seu primeiro usuário.</p>
+          <Button className="bg-zinc-700 hover:bg-zinc-600" onClick={() => setIsCreateUserDialogOpen(true)}>
             <UserPlus className="h-4 w-4 mr-2" />
             Cadastrar Primeiro Usuário
           </Button>
@@ -255,14 +255,20 @@ export function UserManagement() {
       ) : (
         <div className="grid gap-6">
           {users.map((user) => (
-            <Card key={user.id} className={!user.active ? "opacity-70" : undefined}>
+            <Card
+              key={user.id}
+              className={`bg-zinc-900 border-zinc-700 rounded-lg text-white ${!user.active ? "opacity-70" : undefined}`}
+            >
               <CardHeader>
                 <div className="flex justify-between items-start">
                   <div>
                     <CardTitle className="flex items-center space-x-2">
                       <User className="h-5 w-5" />
                       <span>{user.name}</span>
-                      <Badge variant={user.role === "admin" ? "default" : "outline"}>
+                      <Badge
+                        variant={user.role === "admin" ? "default" : "outline"}
+                        className={user.role === "admin" ? "" : "text-white border-zinc-600"}
+                      >
                         {user.role === "admin" ? "Administrador" : "Usuário"}
                       </Badge>
                       {!user.active && <Badge variant="destructive">Inativo</Badge>}
@@ -272,10 +278,20 @@ export function UserManagement() {
                     </CardDescription>
                   </div>
                   <div className="flex space-x-2">
-                    <Button variant="outline" size="sm" onClick={() => startEditUser(user)}>
+                    <Button
+                      variant="outline"
+                      className="border-zinc-700 text-zinc-300 hover:text-white hover:bg-zinc-800"
+                      size="sm"
+                      onClick={() => startEditUser(user)}
+                    >
                       <Edit className="h-4 w-4" />
                     </Button>
-                    <Button variant="outline" size="sm" onClick={() => deleteUser(user.id)}>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => deleteUser(user.id)}
+                      className="bg-gray-500 hover:bg-gray-600 text-white border-gray-500"
+                    >
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
@@ -284,11 +300,11 @@ export function UserManagement() {
               <CardContent>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <p className="text-sm text-gray-600">Email</p>
+                    <p className="text-sm text-zinc-400">Email</p>
                     <p className="font-medium">{user.email || "Não informado"}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-600">Última atualização</p>
+                    <p className="text-sm text-zinc-400">Última atualização</p>
                     <p className="font-medium">{new Date(user.updated_at).toLocaleDateString("pt-BR")}</p>
                   </div>
                 </div>
@@ -300,17 +316,22 @@ export function UserManagement() {
 
       {/* Create User Dialog */}
       <Dialog open={isCreateUserDialogOpen} onOpenChange={setIsCreateUserDialogOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl bg-zinc-900 border-zinc-700 text-white rounded-lg">
           <DialogHeader>
             <DialogTitle>Cadastrar Novo Usuário</DialogTitle>
-            <DialogDescription>Preencha os dados do usuário para cadastrá-lo no sistema.</DialogDescription>
+            <DialogDescription className="text-zinc-400">
+              Preencha os dados do usuário para cadastrá-lo no sistema.
+            </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="username">Nome de Usuário *</Label>
+                <Label className="text-white" htmlFor="username">
+                  Nome de Usuário *
+                </Label>
                 <Input
+                  className="bg-zinc-800 border-zinc-700 text-white placeholder:text-zinc-500 rounded-lg"
                   id="username"
                   value={newUsername}
                   onChange={(e) => setNewUsername(e.target.value)}
@@ -318,8 +339,11 @@ export function UserManagement() {
                 />
               </div>
               <div>
-                <Label htmlFor="password">Senha *</Label>
+                <Label className="text-white" htmlFor="password">
+                  Senha *
+                </Label>
                 <Input
+                  className="bg-zinc-800 border-zinc-700 text-white placeholder:text-zinc-500 rounded-lg"
                   id="password"
                   type="password"
                   value={newPassword}
@@ -330,8 +354,11 @@ export function UserManagement() {
             </div>
 
             <div>
-              <Label htmlFor="name">Nome Completo *</Label>
+              <Label className="text-white" htmlFor="name">
+                Nome Completo *
+              </Label>
               <Input
+                className="bg-zinc-800 border-zinc-700 text-white placeholder:text-zinc-500 rounded-lg"
                 id="name"
                 value={newName}
                 onChange={(e) => setNewName(e.target.value)}
@@ -341,8 +368,11 @@ export function UserManagement() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="email">Email</Label>
+                <Label className="text-white" htmlFor="email">
+                  Email
+                </Label>
                 <Input
+                  className="bg-zinc-800 border-zinc-700 text-white placeholder:text-zinc-500 rounded-lg"
                   id="email"
                   type="email"
                   value={newEmail}
@@ -351,14 +381,20 @@ export function UserManagement() {
                 />
               </div>
               <div>
-                <Label htmlFor="role">Função</Label>
+                <Label className="text-white" htmlFor="role">
+                  Função
+                </Label>
                 <Select value={newRole} onValueChange={setNewRole}>
-                  <SelectTrigger>
+                  <SelectTrigger className="bg-zinc-800 border-zinc-700 text-white rounded-lg">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="user">Usuário</SelectItem>
-                    <SelectItem value="admin">Administrador</SelectItem>
+                  <SelectContent className="bg-zinc-800 border-zinc-700 text-white rounded-lg">
+                    <SelectItem className="text-white" value="user">
+                      Usuário
+                    </SelectItem>
+                    <SelectItem className="text-white" value="admin">
+                      Administrador
+                    </SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -366,14 +402,24 @@ export function UserManagement() {
 
             <div className="flex items-center space-x-2">
               <Switch id="active" checked={newActive} onCheckedChange={setNewActive} />
-              <Label htmlFor="active">Usuário ativo</Label>
+              <Label className="text-white" htmlFor="active">
+                Usuário ativo
+              </Label>
             </div>
 
             <div className="flex justify-end space-x-2 pt-4">
-              <Button variant="outline" onClick={() => setIsCreateUserDialogOpen(false)}>
+              <Button
+                variant="outline"
+                className="border-zinc-700 text-zinc-300 hover:text-white hover:bg-zinc-800"
+                onClick={() => setIsCreateUserDialogOpen(false)}
+              >
                 Cancelar
               </Button>
-              <Button onClick={createUser} disabled={!newUsername || !newPassword || !newName}>
+              <Button
+                className="bg-zinc-700 hover:bg-zinc-600"
+                onClick={createUser}
+                disabled={!newUsername || !newPassword || !newName}
+              >
                 Cadastrar Usuário
               </Button>
             </div>
@@ -383,17 +429,20 @@ export function UserManagement() {
 
       {/* Edit User Dialog */}
       <Dialog open={isEditUserDialogOpen} onOpenChange={setIsEditUserDialogOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl bg-zinc-900 border-zinc-700 text-white rounded-lg">
           <DialogHeader>
             <DialogTitle>Editar Usuário</DialogTitle>
-            <DialogDescription>Atualize os dados do usuário no sistema.</DialogDescription>
+            <DialogDescription className="text-zinc-400">Atualize os dados do usuário no sistema.</DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="editUsername">Nome de Usuário *</Label>
+                <Label className="text-white" htmlFor="editUsername">
+                  Nome de Usuário *
+                </Label>
                 <Input
+                  className="bg-zinc-800 border-zinc-700 text-white placeholder:text-zinc-500 rounded-lg"
                   id="editUsername"
                   value={editUsername}
                   onChange={(e) => setEditUsername(e.target.value)}
@@ -401,8 +450,11 @@ export function UserManagement() {
                 />
               </div>
               <div>
-                <Label htmlFor="editPassword">Nova Senha (deixe em branco para manter a atual)</Label>
+                <Label className="text-white" htmlFor="editPassword">
+                  Nova Senha (deixe em branco para manter a atual)
+                </Label>
                 <Input
+                  className="bg-zinc-800 border-zinc-700 text-white placeholder:text-zinc-500 rounded-lg"
                   id="editPassword"
                   type="password"
                   value={editPassword}
@@ -413,8 +465,11 @@ export function UserManagement() {
             </div>
 
             <div>
-              <Label htmlFor="editName">Nome Completo *</Label>
+              <Label className="text-white" htmlFor="editName">
+                Nome Completo *
+              </Label>
               <Input
+                className="bg-zinc-800 border-zinc-700 text-white placeholder:text-zinc-500 rounded-lg"
                 id="editName"
                 value={editName}
                 onChange={(e) => setEditName(e.target.value)}
@@ -424,8 +479,11 @@ export function UserManagement() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="editEmail">Email</Label>
+                <Label className="text-white" htmlFor="editEmail">
+                  Email
+                </Label>
                 <Input
+                  className="bg-zinc-800 border-zinc-700 text-white placeholder:text-zinc-500 rounded-lg"
                   id="editEmail"
                   type="email"
                   value={editEmail}
@@ -434,14 +492,20 @@ export function UserManagement() {
                 />
               </div>
               <div>
-                <Label htmlFor="editRole">Função</Label>
+                <Label className="text-white" htmlFor="editRole">
+                  Função
+                </Label>
                 <Select value={editRole} onValueChange={setEditRole}>
-                  <SelectTrigger>
+                  <SelectTrigger className="bg-zinc-800 border-zinc-700 text-white rounded-lg">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="user">Usuário</SelectItem>
-                    <SelectItem value="admin">Administrador</SelectItem>
+                  <SelectContent className="bg-zinc-800 border-zinc-700 text-white rounded-lg">
+                    <SelectItem className="text-white" value="user">
+                      Usuário
+                    </SelectItem>
+                    <SelectItem className="text-white" value="admin">
+                      Administrador
+                    </SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -449,14 +513,24 @@ export function UserManagement() {
 
             <div className="flex items-center space-x-2">
               <Switch id="editActive" checked={editActive} onCheckedChange={setEditActive} />
-              <Label htmlFor="editActive">Usuário ativo</Label>
+              <Label className="text-white" htmlFor="editActive">
+                Usuário ativo
+              </Label>
             </div>
 
             <div className="flex justify-end space-x-2 pt-4">
-              <Button variant="outline" onClick={() => setIsEditUserDialogOpen(false)}>
+              <Button
+                variant="outline"
+                className="border-zinc-700 text-zinc-300 hover:text-white hover:bg-zinc-800"
+                onClick={() => setIsEditUserDialogOpen(false)}
+              >
                 Cancelar
               </Button>
-              <Button onClick={updateUser} disabled={!editUsername || !editName}>
+              <Button
+                className="bg-zinc-700 hover:bg-zinc-600"
+                onClick={updateUser}
+                disabled={!editUsername || !editName}
+              >
                 Salvar Alterações
               </Button>
             </div>

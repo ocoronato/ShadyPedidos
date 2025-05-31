@@ -16,7 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { supabase } from "@/lib/supabase"
 import { useToast } from "@/hooks/use-toast"
-import { AuthProvider, useAuth } from "@/contexts/auth-context"
+import { useAuth } from "@/contexts/auth-context"
 import { LoginScreen } from "@/components/login-screen"
 import { UserManagement } from "@/components/user-management"
 
@@ -101,6 +101,25 @@ function ShadyPedidosApp() {
   const [newProductFoto, setNewProductFoto] = useState<File | null>(null)
   const [newProductFotoPreview, setNewProductFotoPreview] = useState<string | null>(null)
 
+  // Form states for edit product
+  const [isEditProductDialogOpen, setIsEditProductDialogOpen] = useState(false)
+  const [editProductId, setEditProductId] = useState<number | null>(null)
+  const [editProductReferencia, setEditProductReferencia] = useState("")
+  const [editProductPreco, setEditProductPreco] = useState(0)
+  const [editProductFoto, setEditProductFoto] = useState<File | null>(null)
+  const [editProductFotoPreview, setEditProductFotoPreview] = useState<string | null>(null)
+
+  // Adicionar novos estados para edição de cliente após os estados de edição de produto (linha ~70)
+
+  // Form states for edit customer
+  const [isEditCustomerDialogOpen, setIsEditCustomerDialogOpen] = useState(false)
+  const [editCustomerId, setEditCustomerId] = useState<number | null>(null)
+  const [editCustomerRazaoSocial, setEditCustomerRazaoSocial] = useState("")
+  const [editCustomerEndereco, setEditCustomerEndereco] = useState("")
+  const [editCustomerCnpj, setEditCustomerCnpj] = useState("")
+  const [editCustomerEmail, setEditCustomerEmail] = useState("")
+  const [editCustomerTelefone, setEditCustomerTelefone] = useState("")
+
   // New state variables for order creation
   const [selectedCustomerId, setSelectedCustomerId] = useState("")
   const [selectedProductId, setSelectedProductId] = useState("")
@@ -114,7 +133,7 @@ function ShadyPedidosApp() {
       totalQuantity: number
     }>
   >([])
-  const [notes, setNotes] = useState("")
+  const [notes, setNotes] = useState("Previsão de entrega xx/xx/xxxx\nCondição de pagamento xx-xx-xx")
 
   const [isEditOrderDialogOpen, setIsEditOrderDialogOpen] = useState(false)
   const [editingOrder, setEditingOrder] = useState<Order | null>(null)
@@ -131,6 +150,15 @@ function ShadyPedidosApp() {
   const [editSelectedProductId, setEditSelectedProductId] = useState("")
   const [editSizeQuantities, setEditSizeQuantities] = useState<Record<number, number>>({})
   const [editNotes, setEditNotes] = useState("")
+
+  // State for product search term
+  const [productSearchTerm, setProductSearchTerm] = useState("")
+  const [productsListSearchTerm, setProductsListSearchTerm] = useState("")
+  const [clientsSearchTerm, setClientsSearchTerm] = useState("")
+
+  // Adicione um novo estado para o termo de pesquisa de clientes após o estado `productSearchTerm` (por volta da linha 115):
+  const [clientSearchTerm, setClientSearchTerm] = useState("")
+  const [ordersSearchTerm, setOrdersSearchTerm] = useState("")
 
   // Load customers from database
   const loadCustomers = async () => {
@@ -276,6 +304,72 @@ function ShadyPedidosApp() {
     }
   }
 
+  // Adicionar função para iniciar edição de cliente após a função deleteCustomer (linha ~200)
+
+  // Start editing customer
+  const startEditCustomer = (customer: Customer) => {
+    setEditCustomerId(customer.id)
+    setEditCustomerRazaoSocial(customer.razao_social)
+    setEditCustomerEndereco(customer.endereco || "")
+    setEditCustomerCnpj(customer.cnpj || "")
+    setEditCustomerEmail(customer.email)
+    setEditCustomerTelefone(customer.telefone || "")
+    setIsEditCustomerDialogOpen(true)
+  }
+
+  // Update customer
+  const updateCustomer = async () => {
+    if (!editCustomerId || !editCustomerRazaoSocial || !editCustomerEmail) {
+      toast({
+        title: "Erro",
+        description: "Razão Social e Email são obrigatórios",
+        variant: "destructive",
+      })
+      return
+    }
+
+    try {
+      const { error } = await supabase
+        .from("customers")
+        .update({
+          razao_social: editCustomerRazaoSocial,
+          endereco: editCustomerEndereco || null,
+          cnpj: editCustomerCnpj || null,
+          email: editCustomerEmail,
+          telefone: editCustomerTelefone || null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", editCustomerId)
+
+      if (error) throw error
+
+      // Reset form
+      setEditCustomerId(null)
+      setEditCustomerRazaoSocial("")
+      setEditCustomerEndereco("")
+      setEditCustomerCnpj("")
+      setEditCustomerEmail("")
+      setEditCustomerTelefone("")
+      setIsEditCustomerDialogOpen(false)
+
+      // Reload customers and orders (since orders display customer info)
+      await loadCustomers()
+      await loadOrders()
+
+      toast({
+        title: "Sucesso",
+        description: "Cliente atualizado com sucesso!",
+      })
+    } catch (error: any) {
+      console.error("Error updating customer:", error)
+      toast({
+        title: "Erro",
+        description: error.message || "Erro ao atualizar cliente",
+        variant: "destructive",
+      })
+    }
+  }
+
   // Create new product
   const createProduct = async () => {
     if (!newProductReferencia || newProductPreco <= 0) {
@@ -351,6 +445,67 @@ function ShadyPedidosApp() {
     }
   }
 
+  // Start editing product
+  const startEditProduct = (product: Product) => {
+    setEditProductId(product.id)
+    setEditProductReferencia(product.referencia)
+    setEditProductPreco(product.preco)
+    setEditProductFotoPreview(product.foto_url)
+    setIsEditProductDialogOpen(true)
+  }
+
+  // Update product
+  const updateProduct = async () => {
+    if (!editProductId || !editProductReferencia || editProductPreco <= 0) {
+      toast({
+        title: "Erro",
+        description: "Referência e preço são obrigatórios",
+        variant: "destructive",
+      })
+      return
+    }
+
+    try {
+      const updates: any = {
+        referencia: editProductReferencia,
+        preco: editProductPreco,
+        updated_at: new Date().toISOString(),
+      }
+
+      // Only update foto_url if a new one is provided
+      if (editProductFotoPreview && editProductFotoPreview !== selectedProduct?.foto_url) {
+        updates.foto_url = editProductFotoPreview
+      }
+
+      const { error } = await supabase.from("products").update(updates).eq("id", editProductId)
+
+      if (error) throw error
+
+      // Reset form
+      setEditProductId(null)
+      setEditProductReferencia("")
+      setEditProductPreco(0)
+      setEditProductFoto(null)
+      setEditProductFotoPreview(null)
+      setIsEditProductDialogOpen(false)
+
+      // Reload products
+      await loadProducts()
+
+      toast({
+        title: "Sucesso",
+        description: "Produto atualizado com sucesso!",
+      })
+    } catch (error: any) {
+      console.error("Error updating product:", error)
+      toast({
+        title: "Erro",
+        description: error.message || "Erro ao atualizar produto",
+        variant: "destructive",
+      })
+    }
+  }
+
   // Update order status
   const updateOrderStatus = async (orderId: number, newStatus: Order["status"]) => {
     try {
@@ -415,14 +570,34 @@ function ShadyPedidosApp() {
     }
   }
 
+  // Handle edit photo upload
+  const handleEditPhotoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (file) {
+      setEditProductFoto(file)
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        setEditProductFotoPreview(e.target?.result as string)
+      }
+      reader.readAsDataURL(file)
+    }
+  }
+
   // Load data on component mount
   useEffect(() => {
     if (user) {
       loadCustomers()
       loadProducts()
       loadOrders()
+      // Inicializar observações com texto padrão
+      setNotes("Previsão de entrega xx/xx/xxxx\nCondição de pagamento xx-xx-xx")
+
+      // Redirecionar usuários não-admin se estiverem em abas restritas
+      if (user.role !== "admin" && (activeTab === "produtos" || activeTab === "usuarios")) {
+        handleTabChange("pedidos")
+      }
     }
-  }, [user])
+  }, [user, activeTab])
 
   // Handle size quantity changes
   const handleSizeQuantityChange = (size: number, quantity: number) => {
@@ -518,13 +693,15 @@ function ShadyPedidosApp() {
       setSelectedProductId("")
       setSizeQuantities({})
       setOrderItems([])
-      setNotes("")
+      setNotes("Previsão de entrega xx/xx/xxxx\nCondição de pagamento xx-xx-xx")
+      setProductSearchTerm("") // Limpar pesquisa de produto
+      setClientSearchTerm("") // Limpar pesquisa de cliente
 
       // Reload orders
       await loadOrders()
 
       // Switch to orders tab
-      setActiveTab("pedidos")
+      handleTabChange("pedidos")
 
       toast({
         title: "Sucesso",
@@ -1062,6 +1239,13 @@ function ShadyPedidosApp() {
     }))
   }
 
+  const handleTabChange = (value: ActiveTab) => {
+    if (user?.role !== "admin" && (value === "produtos" || value === "usuarios")) {
+      return // Não permite mudança para abas restritas
+    }
+    setActiveTab(value)
+  }
+
   if (!user) {
     return <LoginScreen />
   }
@@ -1078,72 +1262,92 @@ function ShadyPedidosApp() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-zinc-800">
       {/* Header */}
-      <header className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-2">
-              <Package className="h-8 w-8 text-primary" />
-              <h1 className="text-2xl font-bold text-gray-900">ShadyPedidos</h1>
-            </div>
-
-            <div className="flex items-center space-x-4">
-              {/* User Info */}
-              <div className="hidden md:flex items-center space-x-1 text-sm">
-                <User className="h-4 w-4 text-gray-500" />
-                <span className="text-gray-700">{user.name}</span>
-                <Badge variant="outline" className="ml-2">
-                  {user.role === "admin" ? "Admin" : "Usuário"}
-                </Badge>
+      <div className="p-4">
+        <header className="bg-black shadow-sm border-zinc-700 rounded-2xl">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex justify-between items-center h-16">
+              <div className="flex items-center space-x-2">
+                <Package className="h-8 w-8 text-white" />
+                <h1 className="text-2xl font-bold text-white italic">SHADY</h1>
               </div>
 
-              {/* Logout Button */}
-              <Button variant="ghost" size="sm" onClick={logout} title="Sair">
-                <LogOut className="h-4 w-4" />
-                <span className="ml-2 hidden md:inline">Sair</span>
-              </Button>
-            </div>
-          </div>
+              <div className="flex items-center space-x-4">
+                {/* User Info */}
+                <div className="hidden md:flex items-center space-x-1 text-sm">
+                  <User className="h-4 w-4 text-zinc-400" />
+                  <span className="text-zinc-300">{user.name}</span>
+                  <Badge variant="outline" className="ml-2 text-white border-zinc-600">
+                    {user.role === "admin" ? "Admin" : "Usuário"}
+                  </Badge>
+                </div>
 
-          {/* Navigation Tabs */}
-          <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as ActiveTab)} className="w-auto mt-2">
-            <TabsList className="grid w-full grid-cols-5">
-              <TabsTrigger value="novo-pedido" className="flex items-center space-x-2">
-                <Plus className="h-4 w-4" />
-                <span>Novo Pedido</span>
-              </TabsTrigger>
-              <TabsTrigger value="clientes" className="flex items-center space-x-2">
-                <Users className="h-4 w-4" />
-                <span>Clientes</span>
-              </TabsTrigger>
-              <TabsTrigger value="produtos" className="flex items-center space-x-2">
-                <Package className="h-4 w-4" />
-                <span>Produtos</span>
-              </TabsTrigger>
-              <TabsTrigger value="pedidos" className="flex items-center space-x-2">
-                <Package className="h-4 w-4" />
-                <span>Pedidos</span>
-              </TabsTrigger>
-              <TabsTrigger value="usuarios" className="flex items-center space-x-2">
-                <User className="h-4 w-4" />
-                <span>Usuários</span>
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
-        </div>
-      </header>
+                {/* Logout Button */}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={logout}
+                  title="Sair"
+                  className="text-zinc-300 hover:text-white hover:bg-zinc-800"
+                >
+                  <LogOut className="h-4 w-4" />
+                  <span className="ml-2 hidden md:inline">Sair</span>
+                </Button>
+              </div>
+            </div>
+
+            {/* Navigation Tabs */}
+            <Tabs
+              value={activeTab}
+              onValueChange={(value) => handleTabChange(value as ActiveTab)}
+              className="w-auto mt-2"
+            >
+              <TabsList
+                className={`grid w-auto ${user?.role === "admin" ? "grid-cols-5" : "grid-cols-3"} bg-zinc-800 mx-auto max-w-4xl rounded-xl`}
+              >
+                <TabsTrigger value="novo-pedido" className="flex items-center space-x-1 text-sm px-3 py-2">
+                  <Plus className="h-4 w-4" />
+                  <span>Novo Pedido</span>
+                </TabsTrigger>
+                <TabsTrigger value="clientes" className="flex items-center space-x-1 text-sm px-3 py-2">
+                  <Users className="h-4 w-4" />
+                  <span>Clientes</span>
+                </TabsTrigger>
+                {user?.role === "admin" && (
+                  <TabsTrigger value="produtos" className="flex items-center space-x-1 text-sm px-3 py-2">
+                    <Package className="h-4 w-4" />
+                    <span>Produtos</span>
+                  </TabsTrigger>
+                )}
+                <TabsTrigger value="pedidos" className="flex items-center space-x-1 text-sm px-3 py-2">
+                  <Package className="h-4 w-4" />
+                  <span>Pedidos</span>
+                </TabsTrigger>
+                {user?.role === "admin" && (
+                  <TabsTrigger value="usuarios" className="flex items-center space-x-1 text-sm px-3 py-2">
+                    <User className="h-4 w-4" />
+                    <span>Usuários</span>
+                  </TabsTrigger>
+                )}
+              </TabsList>
+            </Tabs>
+          </div>
+        </header>
+      </div>
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as ActiveTab)}>
+        <Tabs value={activeTab} onValueChange={(value) => handleTabChange(value as ActiveTab)}>
           {/* Novo Pedido Tab */}
           <TabsContent value="novo-pedido" className="space-y-6">
             <div className="max-w-4xl mx-auto">
-              <Card>
+              <Card className="bg-zinc-900 border-zinc-700 rounded-lg text-white">
                 <CardHeader>
                   <CardTitle>Criar Novo Pedido</CardTitle>
-                  <CardDescription>Selecione o cliente e os produtos com tamanhos e quantidades.</CardDescription>
+                  <CardDescription className="text-zinc-400">
+                    Selecione o cliente e os produtos com tamanhos e quantidades.
+                  </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
                   {/* Customer and Product Selection */}
@@ -1151,22 +1355,42 @@ function ShadyPedidosApp() {
                     {/* Customer Selection */}
                     <div className="space-y-2">
                       <Label htmlFor="customerSelect">Cliente *</Label>
+                      <Input
+                        type="text"
+                        placeholder="Buscar cliente por razão social, email ou CNPJ..."
+                        value={clientSearchTerm}
+                        onChange={(e) => setClientSearchTerm(e.target.value)}
+                        className="bg-zinc-800 border-zinc-700 text-white placeholder:text-zinc-500 rounded-lg mb-2"
+                      />
                       <Select value={selectedCustomerId} onValueChange={setSelectedCustomerId}>
-                        <SelectTrigger>
+                        <SelectTrigger className="bg-zinc-800 border-zinc-700 text-white placeholder:text-zinc-500 rounded-lg">
                           <SelectValue placeholder="Selecione um cliente" />
                         </SelectTrigger>
-                        <SelectContent>
-                          {customers.map((customer) => (
-                            <SelectItem key={customer.id} value={customer.id.toString()}>
-                              {customer.razao_social} - {customer.email}
-                            </SelectItem>
-                          ))}
+                        <SelectContent className="bg-zinc-800 border-zinc-700 text-white rounded-lg max-h-[200px] overflow-y-auto">
+                          {customers
+                            .filter((customer) => {
+                              const searchLower = clientSearchTerm.toLowerCase()
+                              return (
+                                customer.razao_social.toLowerCase().includes(searchLower) ||
+                                customer.email.toLowerCase().includes(searchLower) ||
+                                (customer.cnpj && customer.cnpj.includes(clientSearchTerm))
+                              )
+                            })
+                            .map((customer) => (
+                              <SelectItem key={customer.id} value={customer.id.toString()} className="text-white">
+                                {customer.razao_social} - {customer.email}
+                              </SelectItem>
+                            ))}
                         </SelectContent>
                       </Select>
                       {customers.length === 0 && (
-                        <p className="text-sm text-gray-500">
+                        <p className="text-sm text-zinc-400">
                           Nenhum cliente cadastrado.{" "}
-                          <Button variant="link" className="p-0 h-auto" onClick={() => setActiveTab("clientes")}>
+                          <Button
+                            variant="link"
+                            className="p-0 h-auto text-zinc-400"
+                            onClick={() => handleTabChange("clientes")}
+                          >
                             Cadastrar cliente
                           </Button>
                         </p>
@@ -1176,22 +1400,37 @@ function ShadyPedidosApp() {
                     {/* Product Selection */}
                     <div className="space-y-2">
                       <Label htmlFor="productSelect">Produto *</Label>
+                      <Input
+                        type="text"
+                        placeholder="Buscar produto por referência..."
+                        value={productSearchTerm}
+                        onChange={(e) => setProductSearchTerm(e.target.value)}
+                        className="bg-zinc-800 border-zinc-700 text-white placeholder:text-zinc-500 rounded-lg mb-2"
+                      />
                       <Select value={selectedProductId} onValueChange={setSelectedProductId}>
-                        <SelectTrigger>
+                        <SelectTrigger className="bg-zinc-800 border-zinc-700 text-white placeholder:text-zinc-500 rounded-lg">
                           <SelectValue placeholder="Selecione um produto" />
                         </SelectTrigger>
-                        <SelectContent>
-                          {products.map((product) => (
-                            <SelectItem key={product.id} value={product.id.toString()}>
-                              {product.referencia} - R$ {product.preco.toFixed(2)}
-                            </SelectItem>
-                          ))}
+                        <SelectContent className="bg-zinc-800 border-zinc-700 text-white rounded-lg max-h-[200px] overflow-y-auto">
+                          {products
+                            .filter((product) =>
+                              product.referencia.toLowerCase().includes(productSearchTerm.toLowerCase()),
+                            )
+                            .map((product) => (
+                              <SelectItem key={product.id} value={product.id.toString()} className="text-white">
+                                {product.referencia} - R$ {product.preco.toFixed(2)}
+                              </SelectItem>
+                            ))}
                         </SelectContent>
                       </Select>
                       {products.length === 0 && (
-                        <p className="text-sm text-gray-500">
+                        <p className="text-sm text-zinc-400">
                           Nenhum produto cadastrado.{" "}
-                          <Button variant="link" className="p-0 h-auto" onClick={() => setActiveTab("produtos")}>
+                          <Button
+                            variant="link"
+                            className="p-0 h-auto text-zinc-400"
+                            onClick={() => handleTabChange("produtos")}
+                          >
                             Cadastrar produto
                           </Button>
                         </p>
@@ -1202,11 +1441,12 @@ function ShadyPedidosApp() {
                   {/* Size Selection */}
                   {selectedProductId && (
                     <div className="space-y-4">
-                      <Separator /> <h3 className="text-lg font-medium">Selecionar Tamanhos e Quantidades</h3>
+                      <Separator />{" "}
+                      <h3 className="text-lg font-medium text-white">Selecionar Tamanhos e Quantidades</h3>
                       <div className="grid grid-cols-3 md:grid-cols-5 gap-4">
                         {Array.from({ length: 9 }, (_, i) => i + 33).map((size) => (
                           <div key={size} className="space-y-2">
-                            <Label htmlFor={`size-${size}`} className="text-center block">
+                            <Label htmlFor={`size-${size}`} className="text-center block text-white">
                               Tamanho {size}
                             </Label>
                             <Input
@@ -1215,14 +1455,14 @@ function ShadyPedidosApp() {
                               min="0"
                               value={sizeQuantities[size] || 0}
                               onChange={(e) => handleSizeQuantityChange(size, Number(e.target.value))}
-                              className="text-center"
+                              className="bg-zinc-800 border-zinc-700 text-white placeholder:text-zinc-500 rounded-lg text-center"
                             />
                           </div>
                         ))}
                       </div>
                       {Object.values(sizeQuantities).some((qty) => qty > 0) && (
                         <div className="mt-4">
-                          <Button onClick={addProductToOrder} className="w-full">
+                          <Button onClick={addProductToOrder} className="bg-zinc-700 hover:bg-zinc-600 w-full">
                             Adicionar ao Pedido
                           </Button>
                         </div>
@@ -1234,35 +1474,40 @@ function ShadyPedidosApp() {
                   {orderItems.length > 0 && (
                     <div className="space-y-4">
                       <Separator />
-                      <h3 className="text-lg font-medium">Itens do Pedido</h3>
+                      <h3 className="text-lg font-medium text-white">Itens do Pedido</h3>
                       <div className="space-y-3">
                         {orderItems.map((item, index) => (
-                          <div key={index} className="bg-gray-50 p-4 rounded-lg">
+                          <div key={index} className="bg-zinc-900 rounded-lg p-4 border-zinc-700">
                             <div className="flex justify-between items-start mb-2">
                               <div>
-                                <h4 className="font-medium">{item.productName}</h4>
-                                <p className="text-sm text-gray-600">Preço unitário: R$ {item.unitPrice.toFixed(2)}</p>
+                                <h4 className="font-medium text-white">{item.productName}</h4>
+                                <p className="text-sm text-zinc-400">Preço unitário: R$ {item.unitPrice.toFixed(2)}</p>
                               </div>
-                              <Button variant="ghost" size="sm" onClick={() => removeOrderItem(index)}>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => removeOrderItem(index)}
+                                className="text-zinc-300 hover:text-white hover:bg-zinc-800"
+                              >
                                 <Trash2 className="h-4 w-4" />
                               </Button>
                             </div>
                             <div className="grid grid-cols-3 md:grid-cols-5 gap-2 text-sm">
                               {item.sizes.map((sizeItem) => (
-                                <div key={sizeItem.size} className="text-center p-2 bg-white rounded">
+                                <div key={sizeItem.size} className="text-center p-2 bg-zinc-700 rounded text-white">
                                   <div className="font-medium">Tam {sizeItem.size}</div>
-                                  <div className="text-gray-600">Qtd: {sizeItem.quantity}</div>
+                                  <div className="text-zinc-400">Qtd: {sizeItem.quantity}</div>
                                 </div>
                               ))}
                             </div>
                             <div className="mt-2 text-right">
-                              <span className="font-bold">
+                              <span className="font-bold text-white">
                                 Total: R$ {(item.totalQuantity * item.unitPrice).toFixed(2)}
                               </span>
                             </div>
                           </div>
                         ))}
-                        <div className="text-right font-bold text-xl">
+                        <div className="text-right font-bold text-xl text-white">
                           Total Geral: R$ {calculateOrderTotal().toFixed(2)}
                         </div>
                       </div>
@@ -1273,20 +1518,23 @@ function ShadyPedidosApp() {
 
                   {/* Notes */}
                   <div>
-                    <Label htmlFor="notes">Observações</Label>
+                    <Label htmlFor="notes" className="text-white">
+                      Observações
+                    </Label>
                     <Textarea
                       id="notes"
                       value={notes}
                       onChange={(e) => setNotes(e.target.value)}
                       placeholder="Observações adicionais..."
                       rows={3}
+                      className="bg-zinc-800 border-zinc-700 text-white placeholder:text-zinc-500 rounded-lg"
                     />
                   </div>
 
                   <Button
                     onClick={createOrderFromSelection}
                     disabled={!selectedCustomerId || orderItems.length === 0}
-                    className="w-full"
+                    className="bg-zinc-700 hover:bg-zinc-600 w-full"
                   >
                     Criar Pedido
                   </Button>
@@ -1298,112 +1546,172 @@ function ShadyPedidosApp() {
           {/* Clientes Tab */}
           <TabsContent value="clientes" className="space-y-6">
             <div className="flex justify-between items-center">
-              <h2 className="text-2xl font-bold text-gray-900">Clientes ({customers.length})</h2>
-              <Button onClick={() => setIsCreateCustomerDialogOpen(true)}>
+              <h2 className="text-2xl font-bold text-white">Clientes ({customers.length})</h2>
+              <Button onClick={() => setIsCreateCustomerDialogOpen(true)} className="bg-zinc-700 hover:bg-zinc-600">
                 <Building2 className="h-4 w-4 mr-2" />
                 Cadastrar Cliente
               </Button>
             </div>
 
-            {customers.length === 0 ? (
-              <div className="text-center py-12">
-                <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">Nenhum cliente encontrado</h3>
-                <p className="text-gray-500 mb-4">Comece cadastrando seu primeiro cliente.</p>
-                <Button onClick={() => setIsCreateCustomerDialogOpen(true)}>
-                  <Building2 className="h-4 w-4 mr-2" />
-                  Cadastrar Primeiro Cliente
-                </Button>
+            {/* Adicionar barra de pesquisa para clientes */}
+            <div className="relative">
+              <Input
+                type="text"
+                placeholder="Pesquisar clientes por razão social ou CNPJ..."
+                value={clientsSearchTerm}
+                onChange={(e) => setClientsSearchTerm(e.target.value)}
+                className="bg-zinc-800 border-zinc-700 text-white placeholder:text-zinc-500 rounded-lg pl-10"
+              />
+              <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-zinc-400">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="lucide lucide-search"
+                >
+                  <circle cx="11" cy="11" r="8" />
+                  <path d="m21 21-4.3-4.3" />
+                </svg>
               </div>
-            ) : (
-              <div className="grid gap-6">
-                {customers.map((customer) => (
-                  <Card key={customer.id}>
-                    <CardHeader>
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <CardTitle className="flex items-center space-x-2">
-                            <Building2 className="h-5 w-5" />
-                            <span>{customer.razao_social}</span>
-                            <Badge variant="outline">ID: {customer.id}</Badge>
-                          </CardTitle>
-                          <CardDescription>
-                            {customer.email} • Cliente desde {new Date(customer.created_at).toLocaleDateString("pt-BR")}
-                          </CardDescription>
-                        </div>
-                        <div className="flex space-x-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {
-                              setSelectedCustomer(customer)
-                              setIsViewCustomerDialogOpen(true)
-                            }}
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                          <Button variant="outline" size="sm" onClick={() => deleteCustomer(customer.id)}>
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
+            </div>
+
+            {customers
+              .filter(
+                (customer) =>
+                  customer.razao_social.toLowerCase().includes(clientsSearchTerm.toLowerCase()) ||
+                  (customer.cnpj && customer.cnpj.includes(clientsSearchTerm)),
+              )
+              .map((customer) => (
+                <Card key={customer.id} className="bg-zinc-900 border-zinc-700 rounded-lg text-white">
+                  <CardHeader>
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <CardTitle className="flex items-center space-x-2">
+                          <Building2 className="h-5 w-5" />
+                          <span>{customer.razao_social}</span>
+                          <Badge variant="outline" className="text-white border-zinc-600">
+                            ID: {customer.id}
+                          </Badge>
+                        </CardTitle>
+                        <CardDescription className="text-zinc-400">
+                          {customer.email} • Cliente desde {new Date(customer.created_at).toLocaleDateString("pt-BR")}
+                        </CardDescription>
                       </div>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <p className="text-sm text-gray-600">CNPJ</p>
-                          <p className="font-medium">{customer.cnpj || "Não informado"}</p>
-                        </div>
-                        <div>
-                          <p className="text-sm text-gray-600">Telefone</p>
-                          <p className="font-medium">{customer.telefone || "Não informado"}</p>
-                        </div>
+                      {/* Adicionar botão de edição na lista de clientes (linha ~1000, dentro do mapeamento de clientes)
+                      // Modificar a div que contém os botões de visualização e exclusão: */}
+
+                      <div className="flex space-x-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => startEditCustomer(customer)}
+                          className="border-zinc-700 text-zinc-300 hover:text-white hover:bg-zinc-800"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setSelectedCustomer(customer)
+                            setIsViewCustomerDialogOpen(true)
+                          }}
+                          className="border-zinc-700 text-zinc-300 hover:text-white hover:bg-zinc-800"
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => deleteCustomer(customer.id)}
+                          className="border-zinc-700 text-zinc-300 hover:text-white hover:bg-zinc-800"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
                       </div>
-                      {customer.endereco && (
-                        <div className="mt-2">
-                          <p className="text-sm text-gray-600">Endereço</p>
-                          <p className="font-medium">{customer.endereco}</p>
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            )}
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-sm text-zinc-400">CNPJ</p>
+                        <p className="font-medium">{customer.cnpj || "Não informado"}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-zinc-400">Telefone</p>
+                        <p className="font-medium">{customer.telefone || "Não informado"}</p>
+                      </div>
+                    </div>
+                    {customer.endereco && (
+                      <div className="mt-2">
+                        <p className="text-sm text-zinc-400">Endereço</p>
+                        <p className="font-medium">{customer.endereco}</p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              ))}
           </TabsContent>
 
           {/* Produtos Tab */}
-          <TabsContent value="produtos" className="space-y-6">
-            <div className="flex justify-between items-center">
-              <h2 className="text-2xl font-bold text-gray-900">Produtos ({products.length})</h2>
-              <Button onClick={() => setIsCreateProductDialogOpen(true)}>
-                <Plus className="h-4 w-4 mr-2" />
-                Cadastrar Produto
-              </Button>
-            </div>
-
-            {products.length === 0 ? (
-              <div className="text-center py-12">
-                <Package className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">Nenhum produto encontrado</h3>
-                <p className="text-gray-500 mb-4">Comece cadastrando seu primeiro produto.</p>
-                <Button onClick={() => setIsCreateProductDialogOpen(true)}>
+          {user?.role === "admin" && (
+            <TabsContent value="produtos" className="space-y-6">
+              <div className="flex justify-between items-center">
+                <h2 className="text-2xl font-bold text-white">Produtos ({products.length})</h2>
+                <Button onClick={() => setIsCreateProductDialogOpen(true)} className="bg-zinc-700 hover:bg-zinc-600">
                   <Plus className="h-4 w-4 mr-2" />
-                  Cadastrar Primeiro Produto
+                  Cadastrar Produto
                 </Button>
               </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {products.map((product) => (
-                  <Card key={product.id}>
+
+              {/* Adicionar barra de pesquisa para produtos */}
+              <div className="relative">
+                <Input
+                  type="text"
+                  placeholder="Pesquisar produtos por referência..."
+                  value={productsListSearchTerm}
+                  onChange={(e) => setProductsListSearchTerm(e.target.value)}
+                  className="bg-zinc-800 border-zinc-700 text-white placeholder:text-zinc-500 rounded-lg pl-10"
+                />
+                <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-zinc-400">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="lucide lucide-search"
+                  >
+                    <circle cx="11" cy="11" r="8" />
+                    <path d="m21 21-4.3-4.3" />
+                  </svg>
+                </div>
+              </div>
+
+              {products
+                .filter((product) => product.referencia.toLowerCase().includes(productsListSearchTerm.toLowerCase()))
+                .map((product) => (
+                  <Card key={product.id} className="bg-zinc-900 border-zinc-700 rounded-lg text-white">
                     <CardHeader>
                       <div className="flex justify-between items-start">
                         <div className="flex-1">
                           <CardTitle className="text-lg flex items-center gap-2">
                             {product.referencia}
-                            <Badge variant="outline">ID: {product.id}</Badge>
+                            <Badge variant="outline" className="text-white border-zinc-600">
+                              ID: {product.id}
+                            </Badge>
                           </CardTitle>
-                          <CardDescription>
+                          <CardDescription className="text-zinc-400">
                             Cadastrado em {new Date(product.created_at).toLocaleDateString("pt-BR")}
                           </CardDescription>
                         </div>
@@ -1415,10 +1723,24 @@ function ShadyPedidosApp() {
                               setSelectedProduct(product)
                               setIsViewProductDialogOpen(true)
                             }}
+                            className="border-zinc-700 text-zinc-300 hover:text-white hover:bg-zinc-800"
                           >
                             <Eye className="h-4 w-4" />
                           </Button>
-                          <Button variant="outline" size="sm" onClick={() => deleteProduct(product.id)}>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => startEditProduct(product)}
+                            className="border-zinc-700 text-zinc-300 hover:text-white hover:bg-zinc-800"
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => deleteProduct(product.id)}
+                            className="border-zinc-700 text-zinc-300 hover:text-white hover:bg-zinc-800"
+                          >
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>
@@ -1440,18 +1762,17 @@ function ShadyPedidosApp() {
                     </CardContent>
                   </Card>
                 ))}
-              </div>
-            )}
-          </TabsContent>
+            </TabsContent>
+          )}
 
           {/* Pedidos Tab */}
           <TabsContent value="pedidos" className="space-y-6">
             {orders.length === 0 ? (
               <div className="text-center py-12">
-                <Package className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">Nenhum pedido encontrado</h3>
-                <p className="text-gray-500 mb-4">Comece criando seu primeiro pedido.</p>
-                <Button onClick={() => setActiveTab("novo-pedido")}>
+                <Package className="h-12 w-12 text-zinc-400 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-white mb-2">Nenhum pedido encontrado</h3>
+                <p className="text-zinc-400 mb-4">Comece criando seu primeiro pedido.</p>
+                <Button onClick={() => handleTabChange("novo-pedido")} className="bg-zinc-700 hover:bg-zinc-600">
                   <Plus className="h-4 w-4 mr-2" />
                   Criar Primeiro Pedido
                 </Button>
@@ -1459,101 +1780,163 @@ function ShadyPedidosApp() {
             ) : (
               <div className="space-y-6">
                 <div className="flex justify-between items-center">
-                  <h2 className="text-2xl font-bold text-gray-900">Pedidos ({orders.length})</h2>
+                  <h2 className="text-2xl font-bold text-white">Pedidos ({orders.length})</h2>
+                </div>
+
+                {/* Search bar for orders */}
+                <div className="relative">
+                  <Input
+                    type="text"
+                    placeholder="Buscar pedidos por ID, cliente ou email..."
+                    value={ordersSearchTerm}
+                    onChange={(e) => setOrdersSearchTerm(e.target.value)}
+                    className="bg-zinc-800 border-zinc-700 text-white placeholder:text-zinc-500 rounded-lg pl-10"
+                  />
+                  <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-zinc-400">
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className="lucide lucide-search"
+                    >
+                      <circle cx="11" cy="11" r="8" />
+                      <path d="m21 21-4.3-4.3" />
+                    </svg>
+                  </div>
                 </div>
 
                 <div className="grid gap-6">
-                  {orders.map((order) => (
-                    <Card key={order.id}>
-                      <CardHeader>
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <CardTitle className="flex items-center space-x-2">
-                              <span>Pedido #{order.id}</span>
-                              <Badge className={getStatusColor(order.status)}>{getStatusText(order.status)}</Badge>
-                            </CardTitle>
-                            <CardDescription>
-                              {order.customer?.razao_social} • {new Date(order.created_at).toLocaleDateString("pt-BR")}
-                            </CardDescription>
+                  {orders
+                    .filter((order) => {
+                      const searchTermLower = ordersSearchTerm.toLowerCase()
+                      const customerName = order.customer?.razao_social?.toLowerCase() || ""
+                      const customerEmail = order.customer?.email?.toLowerCase() || ""
+                      const orderId = order.id.toString()
+
+                      return (
+                        orderId.includes(searchTermLower) ||
+                        customerName.includes(searchTermLower) ||
+                        customerEmail.includes(searchTermLower)
+                      )
+                    })
+                    .map((order) => (
+                      <Card key={order.id} className="bg-zinc-900 border-zinc-700 rounded-lg text-white">
+                        <CardHeader>
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <CardTitle className="flex items-center space-x-2">
+                                <span>Pedido #{order.id}</span>
+                                <Badge className={getStatusColor(order.status)}>{getStatusText(order.status)}</Badge>
+                              </CardTitle>
+                              <CardDescription className="text-zinc-400">
+                                {order.customer?.razao_social} •{" "}
+                                {new Date(order.created_at).toLocaleDateString("pt-BR")}
+                              </CardDescription>
+                            </div>
+                            <div className="flex space-x-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => startEditOrder(order)}
+                                title="Editar Pedido"
+                                className="border-zinc-700 text-zinc-300 hover:text-white hover:bg-zinc-800"
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => printOrder(order)}
+                                title="Imprimir Pedido"
+                                className="border-zinc-700 text-zinc-300 hover:text-white hover:bg-zinc-800"
+                              >
+                                <Printer className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  setSelectedOrder(order)
+                                  setIsViewOrderDialogOpen(true)
+                                }}
+                                className="border-zinc-700 text-zinc-300 hover:text-white hover:bg-zinc-800"
+                              >
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => deleteOrder(order.id)}
+                                className="border-zinc-700 text-zinc-300 hover:text-white hover:bg-zinc-800"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
                           </div>
-                          <div className="flex space-x-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => startEditOrder(order)}
-                              title="Editar Pedido"
+                        </CardHeader>
+                        <CardContent>
+                          <div className="flex justify-between items-center">
+                            <div>
+                              <p className="text-sm text-zinc-400">
+                                {order.order_items?.length || 0}{" "}
+                                {(order.order_items?.length || 0) === 1 ? "item" : "itens"}
+                              </p>
+                              <p className="font-bold text-lg text-white">R$ {order.total.toFixed(2)}</p>
+                            </div>
+                            <Select
+                              value={order.status}
+                              onValueChange={(value: Order["status"]) => updateOrderStatus(order.id, value)}
                             >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => printOrder(order)}
-                              title="Imprimir Pedido"
-                            >
-                              <Printer className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => {
-                                setSelectedOrder(order)
-                                setIsViewOrderDialogOpen(true)
-                              }}
-                            >
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                            <Button variant="outline" size="sm" onClick={() => deleteOrder(order.id)}>
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
+                              <SelectTrigger className="bg-zinc-800 border-zinc-700 text-white rounded-lg">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent className="bg-zinc-800 border-zinc-700 text-white rounded-lg">
+                                <SelectItem value="pending" className="text-white">
+                                  Pendente
+                                </SelectItem>
+                                <SelectItem value="processing" className="text-white">
+                                  Processando
+                                </SelectItem>
+                                <SelectItem value="completed" className="text-white">
+                                  Concluído
+                                </SelectItem>
+                                <SelectItem value="cancelled" className="text-white">
+                                  Cancelado
+                                </SelectItem>
+                              </SelectContent>
+                            </Select>
                           </div>
-                        </div>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="flex justify-between items-center">
-                          <div>
-                            <p className="text-sm text-gray-600">
-                              {order.order_items?.length || 0}{" "}
-                              {(order.order_items?.length || 0) === 1 ? "item" : "itens"}
-                            </p>
-                            <p className="font-bold text-lg">R$ {order.total.toFixed(2)}</p>
-                          </div>
-                          <Select
-                            value={order.status}
-                            onValueChange={(value: Order["status"]) => updateOrderStatus(order.id, value)}
-                          >
-                            <SelectTrigger className="w-40">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="pending">Pendente</SelectItem>
-                              <SelectItem value="processing">Processando</SelectItem>
-                              <SelectItem value="completed">Concluído</SelectItem>
-                              <SelectItem value="cancelled">Cancelado</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
+                        </CardContent>
+                      </Card>
+                    ))}
                 </div>
               </div>
             )}
           </TabsContent>
 
           {/* Usuários Tab */}
-          <TabsContent value="usuarios" className="space-y-6">
-            <UserManagement />
-          </TabsContent>
+          {user?.role === "admin" && (
+            <TabsContent value="usuarios" className="space-y-6">
+              <UserManagement />
+            </TabsContent>
+          )}
         </Tabs>
       </main>
 
       {/* Create Customer Dialog */}
       <Dialog open={isCreateCustomerDialogOpen} onOpenChange={setIsCreateCustomerDialogOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl bg-zinc-900 border-zinc-700 text-white rounded-lg">
           <DialogHeader>
             <DialogTitle>Cadastrar Novo Cliente</DialogTitle>
-            <DialogDescription>Preencha os dados da empresa para cadastrar um novo cliente.</DialogDescription>
+            <DialogDescription className="text-zinc-400">
+              Preencha os dados da empresa para cadastrar um novo cliente.
+            </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4">
@@ -1565,6 +1948,7 @@ function ShadyPedidosApp() {
                   value={newCustomerRazaoSocial}
                   onChange={(e) => setNewCustomerRazaoSocial(e.target.value)}
                   placeholder="Nome da empresa"
+                  className="bg-zinc-800 border-zinc-700 text-white placeholder:text-zinc-500 rounded-lg"
                 />
               </div>
               <div>
@@ -1574,6 +1958,7 @@ function ShadyPedidosApp() {
                   value={newCustomerCnpj}
                   onChange={(e) => setNewCustomerCnpj(formatCNPJ(e.target.value))}
                   placeholder="00.000.000/0000-00"
+                  className="bg-zinc-800 border-zinc-700 text-white placeholder:text-zinc-500 rounded-lg"
                 />
               </div>
             </div>
@@ -1586,6 +1971,7 @@ function ShadyPedidosApp() {
                 onChange={(e) => setNewCustomerEndereco(e.target.value)}
                 placeholder="Endereço completo da empresa"
                 rows={3}
+                className="bg-zinc-800 border-zinc-700 text-white placeholder:text-zinc-500 rounded-lg"
               />
             </div>
 
@@ -1598,6 +1984,7 @@ function ShadyPedidosApp() {
                   value={newCustomerEmail}
                   onChange={(e) => setNewCustomerEmail(e.target.value)}
                   placeholder="contato@empresa.com"
+                  className="bg-zinc-800 border-zinc-700 text-white placeholder:text-zinc-500 rounded-lg"
                 />
               </div>
               <div>
@@ -1607,15 +1994,24 @@ function ShadyPedidosApp() {
                   value={newCustomerTelefone}
                   onChange={(e) => setNewCustomerTelefone(formatPhone(e.target.value))}
                   placeholder="(11) 99999-9999"
+                  className="bg-zinc-800 border-zinc-700 text-white placeholder:text-zinc-500 rounded-lg"
                 />
               </div>
             </div>
 
             <div className="flex justify-end space-x-2 pt-4">
-              <Button variant="outline" onClick={() => setIsCreateCustomerDialogOpen(false)}>
+              <Button
+                variant="outline"
+                onClick={() => setIsCreateCustomerDialogOpen(false)}
+                className="border-zinc-700 text-zinc-300 hover:text-white hover:bg-zinc-800"
+              >
                 Cancelar
               </Button>
-              <Button onClick={createCustomer} disabled={!newCustomerRazaoSocial || !newCustomerEmail}>
+              <Button
+                onClick={createCustomer}
+                disabled={!newCustomerRazaoSocial || !newCustomerEmail}
+                className="bg-zinc-700 hover:bg-zinc-600"
+              >
                 Cadastrar Cliente
               </Button>
             </div>
@@ -1625,10 +2021,12 @@ function ShadyPedidosApp() {
 
       {/* Create Product Dialog */}
       <Dialog open={isCreateProductDialogOpen} onOpenChange={setIsCreateProductDialogOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl bg-zinc-900 border-zinc-700 text-white rounded-lg">
           <DialogHeader>
             <DialogTitle>Cadastrar Novo Produto</DialogTitle>
-            <DialogDescription>Preencha os dados do produto para cadastrá-lo no sistema.</DialogDescription>
+            <DialogDescription className="text-zinc-400">
+              Preencha os dados do produto para cadastrá-lo no sistema.
+            </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4">
@@ -1640,7 +2038,7 @@ function ShadyPedidosApp() {
                   type="file"
                   accept="image/*"
                   onChange={handlePhotoUpload}
-                  className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                  className="block w-full text-sm text-zinc-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
                 />
               </div>
               {newProductFotoPreview && (
@@ -1662,6 +2060,7 @@ function ShadyPedidosApp() {
                   value={newProductReferencia}
                   onChange={(e) => setNewProductReferencia(e.target.value)}
                   placeholder="REF-001"
+                  className="bg-zinc-800 border-zinc-700 text-white placeholder:text-zinc-500 rounded-lg"
                 />
               </div>
               <div>
@@ -1674,16 +2073,102 @@ function ShadyPedidosApp() {
                   value={newProductPreco}
                   onChange={(e) => setNewProductPreco(Number(e.target.value))}
                   placeholder="0.00"
+                  className="bg-zinc-800 border-zinc-700 text-white placeholder:text-zinc-500 rounded-lg"
                 />
               </div>
             </div>
 
             <div className="flex justify-end space-x-2 pt-4">
-              <Button variant="outline" onClick={() => setIsCreateProductDialogOpen(false)}>
+              <Button
+                variant="outline"
+                onClick={() => setIsCreateProductDialogOpen(false)}
+                className="border-zinc-700 text-zinc-300 hover:text-white hover:bg-zinc-800"
+              >
                 Cancelar
               </Button>
-              <Button onClick={createProduct} disabled={!newProductReferencia || newProductPreco <= 0}>
+              <Button
+                onClick={createProduct}
+                disabled={!newProductReferencia || newProductPreco <= 0}
+                className="bg-zinc-700 hover:bg-zinc-600"
+              >
                 Cadastrar Produto
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Product Dialog */}
+      <Dialog open={isEditProductDialogOpen} onOpenChange={setIsEditProductDialogOpen}>
+        <DialogContent className="max-w-2xl bg-zinc-900 border-zinc-700 text-white rounded-lg">
+          <DialogHeader>
+            <DialogTitle>Editar Produto</DialogTitle>
+            <DialogDescription className="text-zinc-400">Atualize os dados do produto no sistema.</DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="editFoto">Foto do Produto</Label>
+              <div className="mt-2">
+                <input
+                  id="editFoto"
+                  type="file"
+                  accept="image/*"
+                  onChange={handleEditPhotoUpload}
+                  className="block w-full text-sm text-zinc-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                />
+              </div>
+              {editProductFotoPreview && (
+                <div className="mt-4">
+                  <img
+                    src={editProductFotoPreview || "/placeholder.svg"}
+                    alt="Preview"
+                    className="w-32 h-32 object-cover rounded-lg border"
+                  />
+                </div>
+              )}
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="editReferencia">Referência do Produto *</Label>
+                <Input
+                  id="editReferencia"
+                  value={editProductReferencia}
+                  onChange={(e) => setEditProductReferencia(e.target.value)}
+                  placeholder="REF-001"
+                  className="bg-zinc-800 border-zinc-700 text-white placeholder:text-zinc-500 rounded-lg"
+                />
+              </div>
+              <div>
+                <Label htmlFor="editPreco">Preço *</Label>
+                <Input
+                  id="editPreco"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={editProductPreco}
+                  onChange={(e) => setEditProductPreco(Number(e.target.value))}
+                  placeholder="0.00"
+                  className="bg-zinc-800 border-zinc-700 text-white placeholder:text-zinc-500 rounded-lg"
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end space-x-2 pt-4">
+              <Button
+                variant="outline"
+                onClick={() => setIsEditProductDialogOpen(false)}
+                className="border-zinc-700 text-zinc-300 hover:text-white hover:bg-zinc-800"
+              >
+                Cancelar
+              </Button>
+              <Button
+                onClick={updateProduct}
+                disabled={!editProductReferencia || editProductPreco <= 0}
+                className="bg-zinc-700 hover:bg-zinc-600"
+              >
+                Salvar Alterações
               </Button>
             </div>
           </div>
@@ -1692,12 +2177,12 @@ function ShadyPedidosApp() {
 
       {/* View Order Dialog */}
       <Dialog open={isViewOrderDialogOpen} onOpenChange={setIsViewOrderDialogOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl bg-zinc-900 border-zinc-700 text-white rounded-lg">
           {selectedOrder && (
             <>
               <DialogHeader>
                 <DialogTitle>Pedido #{selectedOrder.id}</DialogTitle>
-                <DialogDescription>
+                <DialogDescription className="text-zinc-400">
                   Criado em {new Date(selectedOrder.created_at).toLocaleDateString("pt-BR")}
                 </DialogDescription>
               </DialogHeader>
@@ -1705,8 +2190,8 @@ function ShadyPedidosApp() {
               <div className="space-y-6">
                 {/* Customer Info */}
                 <div>
-                  <h3 className="font-medium mb-2">Dados do Cliente</h3>
-                  <div className="bg-gray-50 p-4 rounded-lg space-y-1">
+                  <h3 className="font-medium mb-2 text-white">Dados do Cliente</h3>
+                  <div className="bg-zinc-700 p-4 rounded-lg space-y-1">
                     <p>
                       <strong>Razão Social:</strong> {selectedOrder.customer?.razao_social}
                     </p>
@@ -1723,22 +2208,24 @@ function ShadyPedidosApp() {
 
                 {/* Items */}
                 <div>
-                  <h3 className="font-medium mb-2">Itens do Pedido</h3>
+                  <h3 className="font-medium mb-2 text-white">Itens do Pedido</h3>
                   <div className="space-y-2">
                     {selectedOrder.order_items?.map((item) => (
-                      <div key={item.id} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                      <div key={item.id} className="flex justify-between items-center p-3 bg-zinc-700 rounded-lg">
                         <div>
-                          <span className="font-medium">
+                          <span className="font-medium text-white">
                             {item.product?.referencia} - Tamanho {item.size_number}
                           </span>
-                          <span className="text-gray-500 ml-2">
+                          <span className="text-zinc-400 ml-2">
                             {item.quantity}x R$ {item.unit_price.toFixed(2)}
                           </span>
                         </div>
-                        <span className="font-medium">R$ {(item.quantity * item.unit_price).toFixed(2)}</span>
+                        <span className="font-medium text-white">
+                          R$ {(item.quantity * item.unit_price).toFixed(2)}
+                        </span>
                       </div>
                     ))}
-                    <div className="text-right font-bold text-lg pt-2 border-t">
+                    <div className="text-right font-bold text-lg pt-2 border-t text-white">
                       Total: R$ {selectedOrder.total.toFixed(2)}
                     </div>
                   </div>
@@ -1747,17 +2234,20 @@ function ShadyPedidosApp() {
                 {/* Notes */}
                 {selectedOrder.notes && (
                   <div>
-                    <h3 className="font-medium mb-2">Observações</h3>
-                    <div className="bg-gray-50 p-4 rounded-lg">
-                      <p>{selectedOrder.notes}</p>
-                    </div>
+                    <h3 className="font-medium mb-2 text-white">Observações</h3>
+
+                    <div className="bg-zinc-700 p-4 rounded-lg">{selectedOrder.notes}</div>
                   </div>
                 )}
 
-                {/* Status */}
-                <div>
-                  <h3 className="font-medium mb-2">Status</h3>
-                  <Badge className={getStatusColor(selectedOrder.status)}>{getStatusText(selectedOrder.status)}</Badge>
+                <div className="flex justify-end space-x-2 pt-4">
+                  <Button
+                    variant="outline"
+                    onClick={() => setIsViewOrderDialogOpen(false)}
+                    className="border-zinc-700 text-zinc-300 hover:text-white hover:bg-zinc-800"
+                  >
+                    Fechar
+                  </Button>
                 </div>
               </div>
             </>
@@ -1767,24 +2257,21 @@ function ShadyPedidosApp() {
 
       {/* View Customer Dialog */}
       <Dialog open={isViewCustomerDialogOpen} onOpenChange={setIsViewCustomerDialogOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl bg-zinc-900 border-zinc-700 text-white rounded-lg">
           {selectedCustomer && (
             <>
               <DialogHeader>
-                <DialogTitle>{selectedCustomer.razao_social}</DialogTitle>
-                <DialogDescription>
-                  Cliente desde {new Date(selectedCustomer.created_at).toLocaleDateString("pt-BR")}
+                <DialogTitle>Cliente: {selectedCustomer.razao_social}</DialogTitle>
+                <DialogDescription className="text-zinc-400">
+                  Detalhes do cliente desde {new Date(selectedCustomer.created_at).toLocaleDateString("pt-BR")}
                 </DialogDescription>
               </DialogHeader>
 
               <div className="space-y-6">
                 {/* Customer Info */}
                 <div>
-                  <h3 className="font-medium mb-2">Informações da Empresa</h3>
-                  <div className="bg-gray-50 p-4 rounded-lg space-y-2">
-                    <p>
-                      <strong>ID:</strong> {selectedCustomer.id}
-                    </p>
+                  <h3 className="font-medium mb-2 text-white">Informações do Cliente</h3>
+                  <div className="bg-zinc-700 p-4 rounded-lg space-y-1">
                     <p>
                       <strong>Razão Social:</strong> {selectedCustomer.razao_social}
                     </p>
@@ -1809,31 +2296,36 @@ function ShadyPedidosApp() {
                   </div>
                 </div>
 
-                {/* Recent Orders */}
+                {/* Orders */}
                 <div>
-                  <h3 className="font-medium mb-2">Pedidos Recentes</h3>
-                  <div className="space-y-2 max-h-60 overflow-y-auto">
-                    {getCustomerOrders(selectedCustomer.id).length === 0 ? (
-                      <p className="text-gray-500 text-center py-4">Nenhum pedido encontrado</p>
-                    ) : (
-                      getCustomerOrders(selectedCustomer.id)
-                        .slice(0, 5)
-                        .map((order) => (
-                          <div key={order.id} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                            <div>
-                              <span className="font-medium">Pedido #{order.id}</span>
-                              <span className="text-gray-500 ml-2">
-                                {new Date(order.created_at).toLocaleDateString("pt-BR")}
-                              </span>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                              <Badge className={getStatusColor(order.status)}>{getStatusText(order.status)}</Badge>
-                              <span className="font-medium">R$ {order.total.toFixed(2)}</span>
-                            </div>
+                  <h3 className="font-medium mb-2 text-white">Pedidos do Cliente</h3>
+                  {getCustomerOrders(selectedCustomer.id).length === 0 ? (
+                    <p className="text-zinc-400">Nenhum pedido encontrado para este cliente.</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {getCustomerOrders(selectedCustomer.id).map((order) => (
+                        <div key={order.id} className="flex justify-between items-center p-3 bg-zinc-700 rounded-lg">
+                          <div>
+                            <span className="font-medium text-white">Pedido #{order.id}</span>
+                            <span className="text-zinc-400 ml-2">
+                              {new Date(order.created_at).toLocaleDateString("pt-BR")}
+                            </span>
                           </div>
-                        ))
-                    )}
-                  </div>
+                          <span className="font-medium text-white">R$ {order.total.toFixed(2)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex justify-end space-x-2 pt-4">
+                  <Button
+                    variant="outline"
+                    onClick={() => setIsViewCustomerDialogOpen(false)}
+                    className="border-zinc-700 text-zinc-300 hover:text-white hover:bg-zinc-800"
+                  >
+                    Fechar
+                  </Button>
                 </div>
               </div>
             </>
@@ -1843,43 +2335,47 @@ function ShadyPedidosApp() {
 
       {/* View Product Dialog */}
       <Dialog open={isViewProductDialogOpen} onOpenChange={setIsViewProductDialogOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl bg-zinc-900 border-zinc-700 text-white rounded-lg">
           {selectedProduct && (
             <>
               <DialogHeader>
-                <DialogTitle>{selectedProduct.referencia}</DialogTitle>
-                <DialogDescription>
-                  Cadastrado em {new Date(selectedProduct.created_at).toLocaleDateString("pt-BR")}
+                <DialogTitle>Produto: {selectedProduct.referencia}</DialogTitle>
+                <DialogDescription className="text-zinc-400">
+                  Detalhes do produto cadastrado em {new Date(selectedProduct.created_at).toLocaleDateString("pt-BR")}
                 </DialogDescription>
               </DialogHeader>
 
               <div className="space-y-6">
-                {selectedProduct.foto_url && (
-                  <div className="text-center">
-                    <img
-                      src={selectedProduct.foto_url || "/placeholder.svg"}
-                      alt={selectedProduct.referencia}
-                      className="w-64 h-64 object-cover rounded-lg mx-auto border"
-                    />
-                  </div>
-                )}
-
+                {/* Product Info */}
                 <div>
-                  <h3 className="font-medium mb-2">Informações do Produto</h3>
-                  <div className="bg-gray-50 p-4 rounded-lg space-y-2">
-                    <p>
-                      <strong>ID:</strong> {selectedProduct.id}
-                    </p>
+                  <h3 className="font-medium mb-2 text-white">Informações do Produto</h3>
+                  <div className="bg-zinc-700 p-4 rounded-lg space-y-1">
                     <p>
                       <strong>Referência:</strong> {selectedProduct.referencia}
                     </p>
                     <p>
                       <strong>Preço:</strong> R$ {selectedProduct.preco.toFixed(2)}
                     </p>
-                    <p>
-                      <strong>Cadastrado em:</strong> {new Date(selectedProduct.created_at).toLocaleDateString("pt-BR")}
-                    </p>
+                    {selectedProduct.foto_url && (
+                      <div className="mt-4">
+                        <img
+                          src={selectedProduct.foto_url || "/placeholder.svg"}
+                          alt={selectedProduct.referencia}
+                          className="w-full h-48 object-cover rounded-lg"
+                        />
+                      </div>
+                    )}
                   </div>
+                </div>
+
+                <div className="flex justify-end space-x-2 pt-4">
+                  <Button
+                    variant="outline"
+                    onClick={() => setIsViewProductDialogOpen(false)}
+                    className="border-zinc-700 text-zinc-300 hover:text-white hover:bg-zinc-800"
+                  >
+                    Fechar
+                  </Button>
                 </div>
               </div>
             </>
@@ -1889,131 +2385,141 @@ function ShadyPedidosApp() {
 
       {/* Edit Order Dialog */}
       <Dialog open={isEditOrderDialogOpen} onOpenChange={setIsEditOrderDialogOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-4xl bg-zinc-900 border-zinc-700 text-white rounded-lg">
           {editingOrder && (
             <>
               <DialogHeader>
                 <DialogTitle>Editar Pedido #{editingOrder.id}</DialogTitle>
-                <DialogDescription>
-                  Cliente: {editingOrder.customer?.razao_social} • Criado em{" "}
-                  {new Date(editingOrder.created_at).toLocaleDateString("pt-BR")}
+                <DialogDescription className="text-zinc-400">
+                  Modifique os itens e observações do pedido.
                 </DialogDescription>
               </DialogHeader>
 
               <div className="space-y-6">
-                {/* Product Selection for Adding */}
+                {/* Order Items */}
+                <div>
+                  <h3 className="text-lg font-medium text-white">Itens do Pedido</h3>
+                  <div className="space-y-3">
+                    {editOrderItems.map((item, index) => (
+                      <div key={index} className="bg-zinc-700 rounded-lg p-4 border-zinc-700">
+                        <div className="flex justify-between items-start mb-2">
+                          <div>
+                            <h4 className="font-medium text-white">{item.productName}</h4>
+                            <p className="text-sm text-zinc-400">Preço unitário: R$ {item.unitPrice.toFixed(2)}</p>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => removeEditOrderItem(index)}
+                            className="text-zinc-300 hover:text-white hover:bg-zinc-800"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                        <div className="grid grid-cols-3 md:grid-cols-5 gap-2 text-sm">
+                          {item.sizes.map((sizeItem) => (
+                            <div key={sizeItem.size} className="text-center p-2 bg-zinc-600 rounded text-white">
+                              <div className="font-medium">Tam {sizeItem.size}</div>
+                              <div className="text-zinc-400">Qtd: {sizeItem.quantity}</div>
+                            </div>
+                          ))}
+                        </div>
+                        <div className="mt-2 text-right">
+                          <span className="font-bold text-white">
+                            Total: R$ {(item.totalQuantity * item.unitPrice).toFixed(2)}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                    <div className="text-right font-bold text-xl text-white">
+                      Total Geral: R$ {calculateEditOrderTotal().toFixed(2)}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Add Product */}
                 <div className="space-y-4">
-                  <h3 className="text-lg font-medium">Adicionar Produto</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <Separator />
+                  <h3 className="text-lg font-medium text-white">Adicionar Produto</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* Product Selection */}
                     <div className="space-y-2">
-                      <Label htmlFor="editProductSelect">Produto</Label>
+                      <Label htmlFor="editProductSelect">Produto *</Label>
                       <Select value={editSelectedProductId} onValueChange={setEditSelectedProductId}>
-                        <SelectTrigger>
+                        <SelectTrigger className="bg-zinc-800 border-zinc-700 text-white placeholder:text-zinc-500 rounded-lg">
                           <SelectValue placeholder="Selecione um produto" />
                         </SelectTrigger>
-                        <SelectContent>
+                        <SelectContent className="bg-zinc-800 border-zinc-700 text-white rounded-lg">
                           {products.map((product) => (
-                            <SelectItem key={product.id} value={product.id.toString()}>
+                            <SelectItem key={product.id} value={product.id.toString()} className="text-white">
                               {product.referencia} - R$ {product.preco.toFixed(2)}
                             </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
                     </div>
-                  </div>
 
-                  {/* Size Selection for Adding */}
-                  {editSelectedProductId && (
-                    <div className="space-y-4">
-                      <h4 className="font-medium">Selecionar Tamanhos e Quantidades</h4>
-                      <div className="grid grid-cols-3 md:grid-cols-5 gap-4">
-                        {Array.from({ length: 9 }, (_, i) => i + 33).map((size) => (
-                          <div key={size} className="space-y-2">
-                            <Label htmlFor={`edit-size-${size}`} className="text-center block">
-                              Tamanho {size}
-                            </Label>
-                            <Input
-                              id={`edit-size-${size}`}
-                              type="number"
-                              min="0"
-                              value={editSizeQuantities[size] || 0}
-                              onChange={(e) => handleEditSizeQuantityChange(size, Number(e.target.value))}
-                              className="text-center"
-                            />
-                          </div>
-                        ))}
-                      </div>
-
-                      {Object.values(editSizeQuantities).some((qty) => qty > 0) && (
-                        <Button onClick={addProductToEditOrder} className="w-full">
-                          Adicionar ao Pedido
-                        </Button>
-                      )}
-                    </div>
-                  )}
-                </div>
-
-                <Separator />
-
-                {/* Current Order Items */}
-                <div className="space-y-4">
-                  <h3 className="text-lg font-medium">Itens do Pedido</h3>
-                  {editOrderItems.length === 0 ? (
-                    <p className="text-gray-500 text-center py-4">Nenhum item no pedido</p>
-                  ) : (
-                    <div className="space-y-3">
-                      {editOrderItems.map((item, index) => (
-                        <div key={index} className="bg-gray-50 p-4 rounded-lg">
-                          <div className="flex justify-between items-start mb-2">
-                            <div>
-                              <h4 className="font-medium">{item.productName}</h4>
-                              <p className="text-sm text-gray-600">Preço unitário: R$ {item.unitPrice.toFixed(2)}</p>
+                    {/* Size Selection */}
+                    {editSelectedProductId && (
+                      <div className="space-y-4">
+                        <h3 className="text-lg font-medium text-white">Selecionar Tamanhos e Quantidades</h3>
+                        <div className="grid grid-cols-3 md:grid-cols-5 gap-4">
+                          {Array.from({ length: 9 }, (_, i) => i + 33).map((size) => (
+                            <div key={size} className="space-y-2">
+                              <Label htmlFor={`edit-size-${size}`} className="text-center block text-white">
+                                Tamanho {size}
+                              </Label>
+                              <Input
+                                id={`edit-size-${size}`}
+                                type="number"
+                                min="0"
+                                value={editSizeQuantities[size] || 0}
+                                onChange={(e) => handleEditSizeQuantityChange(size, Number(e.target.value))}
+                                className="bg-zinc-800 border-zinc-700 text-white placeholder:text-zinc-500 rounded-lg text-center"
+                              />
                             </div>
-                            <Button variant="ghost" size="sm" onClick={() => removeEditOrderItem(index)}>
-                              <Trash2 className="h-4 w-4" />
+                          ))}
+                        </div>
+                        {Object.values(editSizeQuantities).some((qty) => qty > 0) && (
+                          <div className="mt-4">
+                            <Button onClick={addProductToEditOrder} className="bg-zinc-700 hover:bg-zinc-600 w-full">
+                              Adicionar ao Pedido
                             </Button>
                           </div>
-                          <div className="grid grid-cols-3 md:grid-cols-5 gap-2 text-sm">
-                            {item.sizes.map((sizeItem) => (
-                              <div key={sizeItem.size} className="text-center p-2 bg-white rounded">
-                                <div className="font-medium">Tam {sizeItem.size}</div>
-                                <div className="text-gray-600">Qtd: {sizeItem.quantity}</div>
-                              </div>
-                            ))}
-                          </div>
-                          <div className="mt-2 text-right">
-                            <span className="font-bold">
-                              Total: R$ {(item.totalQuantity * item.unitPrice).toFixed(2)}
-                            </span>
-                          </div>
-                        </div>
-                      ))}
-                      <div className="text-right font-bold text-xl">
-                        Total Geral: R$ {calculateEditOrderTotal().toFixed(2)}
+                        )}
                       </div>
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </div>
-
-                <Separator />
 
                 {/* Notes */}
                 <div>
-                  <Label htmlFor="editNotes">Observações</Label>
+                  <Label htmlFor="editNotes" className="text-white">
+                    Observações
+                  </Label>
                   <Textarea
                     id="editNotes"
                     value={editNotes}
                     onChange={(e) => setEditNotes(e.target.value)}
                     placeholder="Observações adicionais..."
                     rows={3}
+                    className="bg-zinc-800 border-zinc-700 text-white placeholder:text-zinc-500 rounded-lg"
                   />
                 </div>
 
                 <div className="flex justify-end space-x-2 pt-4">
-                  <Button variant="outline" onClick={() => setIsEditOrderDialogOpen(false)}>
+                  <Button
+                    variant="outline"
+                    onClick={() => setIsEditOrderDialogOpen(false)}
+                    className="border-zinc-700 text-zinc-300 hover:text-white hover:bg-zinc-800"
+                  >
                     Cancelar
                   </Button>
-                  <Button onClick={saveEditOrder} disabled={editOrderItems.length === 0}>
+                  <Button
+                    onClick={saveEditOrder}
+                    disabled={editOrderItems.length === 0}
+                    className="bg-zinc-700 hover:bg-zinc-600"
+                  >
                     Salvar Alterações
                   </Button>
                 </div>
@@ -2022,14 +2528,100 @@ function ShadyPedidosApp() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Adicionar o diálogo de edição de cliente após o diálogo de criação de cliente (linha ~1800) */}
+
+      {/* Edit Customer Dialog */}
+      <Dialog open={isEditCustomerDialogOpen} onOpenChange={setIsEditCustomerDialogOpen}>
+        <DialogContent className="max-w-2xl bg-zinc-900 border-zinc-700 text-white rounded-lg">
+          <DialogHeader>
+            <DialogTitle>Editar Cliente</DialogTitle>
+            <DialogDescription className="text-zinc-400">Atualize os dados do cliente no sistema.</DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="editRazaoSocial">Razão Social *</Label>
+                <Input
+                  id="editRazaoSocial"
+                  value={editCustomerRazaoSocial}
+                  onChange={(e) => setEditCustomerRazaoSocial(e.target.value)}
+                  placeholder="Nome da empresa"
+                  className="bg-zinc-800 border-zinc-700 text-white placeholder:text-zinc-500 rounded-lg"
+                />
+              </div>
+              <div>
+                <Label htmlFor="editCnpj">CNPJ</Label>
+                <Input
+                  id="editCnpj"
+                  value={editCustomerCnpj}
+                  onChange={(e) => setEditCustomerCnpj(formatCNPJ(e.target.value))}
+                  placeholder="00.000.000/0000-00"
+                  className="bg-zinc-800 border-zinc-700 text-white placeholder:text-zinc-500 rounded-lg"
+                />
+              </div>
+            </div>
+
+            <div>
+              <Label htmlFor="editEndereco">Endereço</Label>
+              <Textarea
+                id="editEndereco"
+                value={editCustomerEndereco}
+                onChange={(e) => setEditCustomerEndereco(e.target.value)}
+                placeholder="Endereço completo da empresa"
+                rows={3}
+                className="bg-zinc-800 border-zinc-700 text-white placeholder:text-zinc-500 rounded-lg"
+              />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="editEmail">Email *</Label>
+                <Input
+                  id="editEmail"
+                  type="email"
+                  value={editCustomerEmail}
+                  onChange={(e) => setEditCustomerEmail(e.target.value)}
+                  placeholder="contato@empresa.com"
+                  className="bg-zinc-800 border-zinc-700 text-white placeholder:text-zinc-500 rounded-lg"
+                />
+              </div>
+              <div>
+                <Label htmlFor="editTelefone">Telefone</Label>
+                <Input
+                  id="editTelefone"
+                  value={editCustomerTelefone}
+                  onChange={(e) => setEditCustomerTelefone(formatPhone(e.target.value))}
+                  placeholder="(11) 99999-9999"
+                  className="bg-zinc-800 border-zinc-700 text-white placeholder:text-zinc-500 rounded-lg"
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end space-x-2 pt-4">
+              <Button
+                variant="outline"
+                onClick={() => setIsEditCustomerDialogOpen(false)}
+                className="border-zinc-700 text-zinc-300 hover:text-white hover:bg-zinc-800"
+              >
+                Cancelar
+              </Button>
+              <Button
+                onClick={updateCustomer}
+                disabled={!editCustomerRazaoSocial || !editCustomerEmail}
+                className="bg-zinc-700 hover:bg-zinc-600"
+              >
+                Salvar Alterações
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
 
-export default function ShadyPedidos() {
-  return (
-    <AuthProvider>
-      <ShadyPedidosApp />
-    </AuthProvider>
-  )
+export default function Home() {
+  return <ShadyPedidosApp />
 }
