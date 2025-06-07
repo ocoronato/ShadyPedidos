@@ -6,6 +6,11 @@ export async function exportDatabaseStructureSql() {
   try {
     // Definições das tabelas. Adapte conforme a estrutura exata do seu banco.
     const tableDefinitions = `
+-- Script de Estrutura para PostgreSQL (Padrão Supabase)
+-- NOTA: A codificação UTF-8 é definida no nível do banco de dados em PostgreSQL.
+-- Projetos Supabase usam UTF-8 por padrão, que é compatível com 'utf8_general_ci' do MySQL.
+-- A sintaxe 'CHARSET' e 'COLLATE' não é usada aqui.
+
 -- Tabela de Usuários
 CREATE TABLE IF NOT EXISTS users (
   id SERIAL PRIMARY KEY,
