@@ -11,7 +11,8 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
 import { Badge } from "@/components/ui/badge"
-import { Trash2, UserPlus, Edit, User } from "lucide-react"
+import { Trash2, UserPlus, Edit, User, FileJson, FileIcon as FileSql } from "lucide-react"
+import { exportDatabaseStructureSql, exportDatabaseDataJson } from "@/app/actions"
 
 interface UserData {
   id: number
@@ -48,6 +49,9 @@ export function UserManagement() {
   const [editEmail, setEditEmail] = useState("")
   const [editRole, setEditRole] = useState("")
   const [editActive, setEditActive] = useState(true)
+
+  const [isExportingSql, setIsExportingSql] = useState(false)
+  const [isExportingJson, setIsExportingJson] = useState(false)
 
   // Load users from database
   const loadUsers = async () => {
@@ -216,12 +220,76 @@ export function UserManagement() {
     }
   }
 
+  const handleExportSql = async () => {
+    setIsExportingSql(true)
+    toast({ title: "Exportando Estrutura SQL...", description: "Aguarde um momento." })
+    try {
+      const result = await exportDatabaseStructureSql()
+      if (result.success && result.data && result.filename) {
+        const blob = new Blob([result.data], { type: "application/sql" })
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement("a")
+        a.href = url
+        a.download = result.filename
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+        URL.revokeObjectURL(url)
+        toast({ title: "Sucesso", description: "Estrutura SQL exportada!" })
+      } else {
+        throw new Error(result.message || "Falha ao exportar SQL.")
+      }
+    } catch (error: any) {
+      console.error("Error exporting SQL:", error)
+      toast({ title: "Erro na Exportação SQL", description: error.message, variant: "destructive" })
+    } finally {
+      setIsExportingSql(false)
+    }
+  }
+
+  const handleExportJson = async () => {
+    setIsExportingJson(true)
+    toast({ title: "Exportando Dados JSON...", description: "Isso pode levar alguns instantes." })
+    try {
+      const result = await exportDatabaseDataJson()
+      if (result.data && result.filename) {
+        // Checa se data e filename existem
+        const blob = new Blob([result.data], { type: "application/json" })
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement("a")
+        a.href = url
+        a.download = result.filename
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+        URL.revokeObjectURL(url)
+        if (result.success) {
+          toast({ title: "Sucesso", description: "Dados JSON exportados!" })
+        } else {
+          toast({
+            title: "Exportação Parcial",
+            description: result.message || "Alguns dados podem não ter sido exportados.",
+            variant: "default",
+          })
+        }
+      } else {
+        throw new Error(result.message || "Falha ao exportar JSON.")
+      }
+    } catch (error: any) {
+      console.error("Error exporting JSON:", error)
+      toast({ title: "Erro na Exportação JSON", description: error.message, variant: "destructive" })
+    } finally {
+      setIsExportingJson(false)
+    }
+  }
+
   // Load data on component mount
   useEffect(() => {
     loadUsers()
   }, [])
 
-  if (loading) {
+  if (loading && !isExportingSql && !isExportingJson) {
+    // Apenas mostra loading inicial
     return (
       <div className="flex items-center justify-center h-64">
         <div className="text-center">
@@ -234,15 +302,37 @@ export function UserManagement() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-wrap justify-between items-center gap-4">
         <h2 className="text-2xl font-bold text-white">Usuários ({users.length})</h2>
-        <Button className="bg-zinc-700 hover:bg-zinc-600" onClick={() => setIsCreateUserDialogOpen(true)}>
-          <UserPlus className="h-4 w-4 mr-2" />
-          Cadastrar Usuário
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            className="bg-blue-600 hover:bg-blue-700"
+            onClick={handleExportSql}
+            disabled={isExportingSql || isExportingJson}
+          >
+            <FileSql className="h-4 w-4 mr-2" />
+            {isExportingSql ? "Exportando SQL..." : "Exportar Estrutura (SQL)"}
+          </Button>
+          <Button
+            className="bg-green-600 hover:bg-green-700"
+            onClick={handleExportJson}
+            disabled={isExportingJson || isExportingSql}
+          >
+            <FileJson className="h-4 w-4 mr-2" />
+            {isExportingJson ? "Exportando JSON..." : "Exportar Dados (JSON)"}
+          </Button>
+          <Button
+            className="bg-zinc-700 hover:bg-zinc-600"
+            onClick={() => setIsCreateUserDialogOpen(true)}
+            disabled={isExportingSql || isExportingJson}
+          >
+            <UserPlus className="h-4 w-4 mr-2" />
+            Cadastrar Usuário
+          </Button>
+        </div>
       </div>
 
-      {users.length === 0 ? (
+      {users.length === 0 && !loading ? (
         <div className="text-center py-12">
           <User className="h-12 w-12 text-zinc-400 mx-auto mb-4" />
           <h3 className="text-lg font-medium text-white mb-2">Nenhum usuário encontrado</h3>
@@ -290,7 +380,7 @@ export function UserManagement() {
                       variant="outline"
                       size="sm"
                       onClick={() => deleteUser(user.id)}
-                      className="bg-gray-500 hover:bg-gray-600 text-white border-gray-500"
+                      className="bg-gray-500 hover:bg-gray-600 text-white border-gray-500" // Mantido o estilo anterior para este botão
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
