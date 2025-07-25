@@ -1028,7 +1028,7 @@ function ShadyPedidosApp() {
       group.productNotes
         ? `
       <div style="background-color: #f9fafb; border: 1px solid #e5e7eb; border-radius: 4px; padding: 8px; margin: 8px 0; font-size: 12px; font-style: italic;">
-        <strong>Obs:</strong> ${group.productNotes}
+        <strong>Desc:</strong> ${group.productNotes}
       </div>
     `
         : ""
@@ -1483,16 +1483,16 @@ function ShadyPedidosApp() {
                           </div>
                         ))}
                       </div>
-                      {/* Campo de observações do produto */}
+                      {/* Campo de descrição do produto */}
                       <div className="space-y-2">
                         <Label htmlFor="productNotes" className="text-white">
-                          Observações do Produto (opcional)
+                          Descrição do Produto (opcional)
                         </Label>
                         <Textarea
                           id="productNotes"
                           value={currentProductNotes}
                           onChange={(e) => setCurrentProductNotes(e.target.value)}
-                          placeholder="Observações específicas para este produto..."
+                          placeholder="Descrição específica para este produto..."
                           rows={2}
                           className="bg-zinc-800 border-zinc-700 text-white placeholder:text-zinc-500 rounded-lg"
                         />
@@ -1519,9 +1519,9 @@ function ShadyPedidosApp() {
                               <div>
                                 <h4 className="font-medium text-white">{item.productName}</h4>
                                 <p className="text-sm text-zinc-400">Preço unitário: R$ {item.unitPrice.toFixed(2)}</p>
-                                {/* Exibição das observações do produto */}
+                                {/* Exibição da descrição do produto */}
                                 {item.productNotes && (
-                                  <p className="text-sm text-zinc-300 mt-1 italic">Obs: {item.productNotes}</p>
+                                  <p className="text-sm text-zinc-300 mt-1 italic">Desc: {item.productNotes}</p>
                                 )}
                               </div>
                               <Button
@@ -2258,9 +2258,9 @@ function ShadyPedidosApp() {
                           <span className="text-zinc-400 ml-2">
                             {item.quantity}x R$ {item.unit_price.toFixed(2)}
                           </span>
-                          {/* Exibição das observações do produto na visualização */}
+                          {/* Exibição da descrição do produto na visualização */}
                           {item.product_notes && (
-                            <div className="text-sm text-zinc-300 mt-1 italic">Obs: {item.product_notes}</div>
+                            <div className="text-sm text-zinc-300 mt-1 italic">Desc: {item.product_notes}</div>
                           )}
                         </div>
                         <span className="font-medium text-white">
@@ -2448,9 +2448,9 @@ function ShadyPedidosApp() {
                           <div>
                             <h4 className="font-medium text-white">{item.productName}</h4>
                             <p className="text-sm text-zinc-400">Preço unitário: R$ {item.unitPrice.toFixed(2)}</p>
-                            {/* Exibição das observações do produto na edição */}
+                            {/* Exibição da descrição do produto na edição */}
                             {item.productNotes && (
-                              <p className="text-sm text-zinc-300 mt-1 italic">Obs: {item.productNotes}</p>
+                              <p className="text-sm text-zinc-300 mt-1 italic">Desc: {item.productNotes}</p>
                             )}
                           </div>
                           <Button
@@ -2527,16 +2527,16 @@ function ShadyPedidosApp() {
                           ))}
                         </div>
 
-                        {/* Campo de observações do produto na edição */}
+                        {/* Campo de descrição do produto na edição */}
                         <div className="space-y-2">
                           <Label htmlFor="editProductNotes" className="text-white">
-                            Observações do Produto (opcional)
+                            Descrição do Produto (opcional)
                           </Label>
                           <Textarea
                             id="editProductNotes"
                             value={editCurrentProductNotes}
                             onChange={(e) => setEditCurrentProductNotes(e.target.value)}
-                            placeholder="Observações específicas para este produto..."
+                            placeholder="Descrição específica para este produto..."
                             rows={2}
                             className="bg-zinc-800 border-zinc-700 text-white placeholder:text-zinc-500 rounded-lg"
                           />
