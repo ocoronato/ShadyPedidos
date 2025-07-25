@@ -48,7 +48,7 @@ interface OrderItem {
   quantity: number
   unit_price: number
   created_at: string
-  product_notes?: string | null // Adicionar esta linha
+  product_notes?: string | null
   product?: Product
 }
 
@@ -110,8 +110,6 @@ function ShadyPedidosApp() {
   const [editProductFoto, setEditProductFoto] = useState<File | null>(null)
   const [editProductFotoPreview, setEditProductFotoPreview] = useState<string | null>(null)
 
-  // Adicionar novos estados para edição de cliente após os estados de edição de produto (linha ~70)
-
   // Form states for edit customer
   const [isEditCustomerDialogOpen, setIsEditCustomerDialogOpen] = useState(false)
   const [editCustomerId, setEditCustomerId] = useState<number | null>(null)
@@ -132,7 +130,7 @@ function ShadyPedidosApp() {
       unitPrice: number
       sizes: Array<{ size: number; quantity: number }>
       totalQuantity: number
-      productNotes?: string // Adicionar esta linha
+      productNotes?: string
     }>
   >([])
   const [notes, setNotes] = useState("Previsão de entrega xx/xx/xxxx\nCondição de pagamento xx-xx-xx")
@@ -147,7 +145,7 @@ function ShadyPedidosApp() {
       unitPrice: number
       sizes: Array<{ size: number; quantity: number }>
       totalQuantity: number
-      productNotes?: string // Adicionar esta linha
+      productNotes?: string
     }>
   >([])
   const [editSelectedProductId, setEditSelectedProductId] = useState("")
@@ -159,14 +157,11 @@ function ShadyPedidosApp() {
   const [productsListSearchTerm, setProductsListSearchTerm] = useState("")
   const [clientsSearchTerm, setClientsSearchTerm] = useState("")
 
-  // Adicione um novo estado para o termo de pesquisa de clientes após o estado `productSearchTerm` (por volta da linha 115):
   const [clientSearchTerm, setClientSearchTerm] = useState("")
   const [ordersSearchTerm, setOrdersSearchTerm] = useState("")
 
-  // Adicionar após os outros estados de criação de pedido (por volta da linha 90)
   const [currentProductNotes, setCurrentProductNotes] = useState("")
 
-  // Adicionar após os outros estados de edição de pedido (por volta da linha 110)
   const [editCurrentProductNotes, setEditCurrentProductNotes] = useState("")
 
   // Load customers from database
@@ -312,8 +307,6 @@ function ShadyPedidosApp() {
       })
     }
   }
-
-  // Adicionar função para iniciar edição de cliente após a função deleteCustomer (linha ~200)
 
   // Start editing customer
   const startEditCustomer = (customer: Customer) => {
@@ -635,7 +628,7 @@ function ShadyPedidosApp() {
       unitPrice: selectedProduct.preco,
       sizes,
       totalQuantity,
-      productNotes: currentProductNotes || undefined, // Adicionar esta linha
+      productNotes: currentProductNotes || undefined,
     }
 
     setOrderItems((prev) => [...prev, newOrderItem])
@@ -643,7 +636,7 @@ function ShadyPedidosApp() {
     // Reset selections
     setSelectedProductId("")
     setSizeQuantities({})
-    setCurrentProductNotes("") // Adicionar esta linha
+    setCurrentProductNotes("")
 
     toast({
       title: "Produto adicionado",
@@ -692,7 +685,7 @@ function ShadyPedidosApp() {
           size_number: sizeItem.size,
           quantity: sizeItem.quantity,
           unit_price: item.unitPrice,
-          product_notes: item.productNotes || null, // Adicionar esta linha
+          product_notes: item.productNotes || null,
         })),
       )
 
@@ -779,338 +772,339 @@ function ShadyPedidosApp() {
     return digits.slice(0, 11).replace(/(\d{2})(\d{5})(\d{4})/, "($1) $2-$3")
   }
 
-  // Adicionar a função de impressão após as outras funções utilitárias (após formatPhone)
-
   const printOrder = (order: Order) => {
     const printWindow = window.open("", "_blank")
     if (!printWindow) return
 
-    // Agrupar itens por produto para mostrar tamanhos juntos
+    // Agrupar itens por produto E observações para mostrar tamanhos juntos
+    // mas manter produtos com observações diferentes separados
     const groupedItems =
       order.order_items?.reduce(
         (acc, item) => {
-          const productId = item.product_id
-          if (!acc[productId]) {
-            acc[productId] = {
+          // Criar uma chave única que combina product_id e product_notes
+          const groupKey = `${item.product_id}_${item.product_notes || "no_notes"}`
+
+          if (!acc[groupKey]) {
+            acc[groupKey] = {
               product: item.product,
               sizes: [],
               totalQuantity: 0,
               totalValue: 0,
-              productNotes: item.product_notes, // Adicionar as observações do produto
+              productNotes: item.product_notes,
             }
           }
-          acc[productId].sizes.push({
+          acc[groupKey].sizes.push({
             size: item.size_number,
             quantity: item.quantity,
             unitPrice: item.unit_price,
           })
-          acc[productId].totalQuantity += item.quantity
-          acc[productId].totalValue += item.quantity * item.unit_price
+          acc[groupKey].totalQuantity += item.quantity
+          acc[groupKey].totalValue += item.quantity * item.unit_price
           return acc
         },
-        {} as Record<number, any>,
+        {} as Record<string, any>,
       ) || {}
 
     const printContent = `
-  <!DOCTYPE html>
-  <html>
-  <head>
-    <title>Pedido #${order.id} - ShadyPedidos</title>
-    <style>
-      body {
-        font-family: Arial, sans-serif;
-        margin: 20px;
-        color: #333;
-      }
-      .header {
-        text-align: center;
-        border-bottom: 2px solid #333;
-        padding-bottom: 20px;
-        margin-bottom: 30px;
-      }
-      .company-name {
-        font-size: 28px;
-        font-weight: bold;
-        color: #2563eb;
-        margin-bottom: 5px;
-      }
-      .order-title {
-        font-size: 20px;
-        margin-top: 10px;
-      }
-      .section {
-        margin-bottom: 25px;
-      }
-      .section-title {
-        font-size: 16px;
-        font-weight: bold;
-        background-color: #f3f4f6;
-        padding: 8px 12px;
-        border-left: 4px solid #2563eb;
-        margin-bottom: 15px;
-      }
-      .info-grid {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 15px;
-        margin-bottom: 15px;
-      }
-      .info-item {
-        display: flex;
-        flex-direction: column;
-      }
-      .info-label {
-        font-weight: bold;
-        color: #666;
-        font-size: 12px;
-        text-transform: uppercase;
-        margin-bottom: 3px;
-      }
-      .info-value {
-        font-size: 14px;
-      }
-      .product-item {
-        border: 1px solid #e5e7eb;
-        border-radius: 8px;
-        padding: 15px;
-        margin-bottom: 15px;
-        display: flex;
-        gap: 15px;
-      }
-      .product-image {
-        width: 80px;
-        height: 80px;
-        object-fit: cover;
-        border-radius: 6px;
-        border: 1px solid #d1d5db;
-      }
-      .product-details {
-        flex: 1;
-      }
-      .product-name {
-        font-weight: bold;
-        font-size: 16px;
-        margin-bottom: 8px;
-      }
-      .sizes-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
-        gap: 8px;
-        margin: 10px 0;
-      }
-      .size-item {
-        background-color: #f9fafb;
-        border: 1px solid #e5e7eb;
-        border-radius: 4px;
-        padding: 6px;
-        text-align: center;
-        font-size: 12px;
-      }
-      .size-number {
-        font-weight: bold;
-        display: block;
-      }
-      .size-qty {
-        color: #666;
-      }
-      .product-total {
-        text-align: right;
-        font-weight: bold;
-        color: #059669;
-        font-size: 14px;
-      }
-      .total-section {
-        border-top: 2px solid #333;
-        padding-top: 15px;
-        text-align: right;
-      }
-      .total-amount {
-        font-size: 24px;
-        font-weight: bold;
-        color: #059669;
-      }
-      .status-badge {
-        display: inline-block;
-        padding: 4px 12px;
-        border-radius: 20px;
-        font-size: 12px;
-        font-weight: bold;
-        text-transform: uppercase;
-      }
-      .status-pending { background-color: #fef3c7; color: #92400e; }
-      .status-processing { background-color: #dbeafe; color: #1e40af; }
-      .status-completed { background-color: #d1fae5; color: #065f46; }
-      .status-cancelled { background-color: #fee2e2; color: #991b1b; }
-      .notes-section {
-        background-color: #f9fafb;
-        border: 1px solid #e5e7eb;
-        border-radius: 6px;
-        padding: 15px;
-      }
-      .created-by {
-        font-style: italic;
-        color: #666;
-        text-align: right;
-        margin-top: 20px;
-        font-size: 12px;
-      }
-      @media print {
-        body { margin: 0; }
-        .no-print { display: none; }
-      }
-    </style>
-  </head>
-  <body>
-    <div class="header">
-      <div class="company-name">ShadyPedidos</div>
-      <div class="order-title">Pedido #${order.id}</div>
-      <div style="margin-top: 10px; color: #666;">
-        ${new Date(order.created_at).toLocaleDateString("pt-BR", {
-          weekday: "long",
-          year: "numeric",
-          month: "long",
-          day: "numeric",
-          hour: "2-digit",
-          minute: "2-digit",
-        })}
-      </div>
-    </div>
-
-    <div class="section">
-      <div class="section-title">Dados do Cliente</div>
-      <div class="info-grid">
-        <div class="info-item">
-          <div class="info-label">Razão Social</div>
-          <div class="info-value">${order.customer?.razao_social || "N/A"}</div>
-        </div>
-        <div class="info-item">
-          <div class="info-label">Email
-          <div class="info-value">${order.customer?.email || "N/A"}</div>
-        </div>
-        <div class="info-item">
-          <div class="info-label">CNPJ</div>
-          <div class="info-value">${order.customer?.cnpj || "Não informado"}</div>
-        </div>
-        <div class="info-item">
-          <div class="info-label">Telefone</div>
-          <div class="info-value">${order.customer?.telefone || "Não informado"}</div>
-        </div>
-      </div>
-      ${
-        order.customer?.endereco
-          ? `
-        <div class="info-item">
-          <div class="info-label">Endereço</div>
-          <div class="info-value">${order.customer.endereco}</div>
-        </div>
-      `
-          : ""
-      }
-    </div>
-
-    <div class="section">
-      <div class="section-title">Produtos do Pedido</div>
-      ${Object.values(groupedItems)
-        .map(
-          (group: any) => `
-  <div class="product-item">
-    ${
-      group.product?.foto_url
-        ? `
-      <img src="${group.product.foto_url}" alt="${group.product.referencia}" class="product-image" />
-    `
-        : `
-      <div class="product-image" style="background-color: #f3f4f6; display: flex; align-items: center; justify-content: center; color: #9ca3af; font-size: 12px;">
-        Sem foto
-      </div>
-    `
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Pedido #${order.id} - ShadyPedidos</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+      color: #333;
     }
-    <div class="product-details">
-      <div class="product-name">${group.product?.referencia || "Produto não encontrado"}</div>
-      <div style="color: #666; font-size: 14px; margin-bottom: 8px;">
-        Preço unitário: R$ ${group.sizes[0]?.unitPrice?.toFixed(2) || "0.00"}
-      </div>
-      ${
-        group.productNotes
-          ? `
-        <div style="background-color: #f9fafb; border: 1px solid #e5e7eb; border-radius: 4px; padding: 8px; margin: 8px 0; font-size: 12px; font-style: italic;">
-          <strong>Obs:</strong> ${group.productNotes}
-        </div>
-      `
-          : ""
-      }
-      <div class="sizes-grid">
-        ${group.sizes
-          .map(
-            (size: any) => `
-          <div class="size-item">
-            <span class="size-number">${size.size}</span>
-            <span class="size-qty">${size.quantity}x</span>
-          </div>
-        `,
-          )
-          .join("")}
-      </div>
-      <div class="product-total">
-        Total: R$ ${group.totalValue.toFixed(2)} (${group.totalQuantity} ${group.totalQuantity === 1 ? "item" : "itens"})
-      </div>
+    .header {
+      text-align: center;
+      border-bottom: 2px solid #333;
+      padding-bottom: 20px;
+      margin-bottom: 30px;
+    }
+    .company-name {
+      font-size: 28px;
+      font-weight: bold;
+      color: #2563eb;
+      margin-bottom: 5px;
+    }
+    .order-title {
+      font-size: 20px;
+      margin-top: 10px;
+    }
+    .section {
+      margin-bottom: 25px;
+    }
+    .section-title {
+      font-size: 16px;
+      font-weight: bold;
+      background-color: #f3f4f6;
+      padding: 8px 12px;
+      border-left: 4px solid #2563eb;
+      margin-bottom: 15px;
+    }
+    .info-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 15px;
+      margin-bottom: 15px;
+    }
+    .info-item {
+      display: flex;
+      flex-direction: column;
+    }
+    .info-label {
+      font-weight: bold;
+      color: #666;
+      font-size: 12px;
+      text-transform: uppercase;
+      margin-bottom: 3px;
+    }
+    .info-value {
+      font-size: 14px;
+    }
+    .product-item {
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 15px;
+      margin-bottom: 15px;
+      display: flex;
+      gap: 15px;
+    }
+    .product-image {
+      width: 80px;
+      height: 80px;
+      object-fit: cover;
+      border-radius: 6px;
+      border: 1px solid #d1d5db;
+    }
+    .product-details {
+      flex: 1;
+    }
+    .product-name {
+      font-weight: bold;
+      font-size: 16px;
+      margin-bottom: 8px;
+    }
+    .sizes-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+      gap: 8px;
+      margin: 10px 0;
+    }
+    .size-item {
+      background-color: #f9fafb;
+      border: 1px solid #e5e7eb;
+      border-radius: 4px;
+      padding: 6px;
+      text-align: center;
+      font-size: 12px;
+    }
+    .size-number {
+      font-weight: bold;
+      display: block;
+    }
+    .size-qty {
+      color: #666;
+    }
+    .product-total {
+      text-align: right;
+      font-weight: bold;
+      color: #059669;
+      font-size: 14px;
+    }
+    .total-section {
+      border-top: 2px solid #333;
+      padding-top: 15px;
+      text-align: right;
+    }
+    .total-amount {
+      font-size: 24px;
+      font-weight: bold;
+      color: #059669;
+    }
+    .status-badge {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: bold;
+      text-transform: uppercase;
+    }
+    .status-pending { background-color: #fef3c7; color: #92400e; }
+    .status-processing { background-color: #dbeafe; color: #1e40af; }
+    .status-completed { background-color: #d1fae5; color: #065f46; }
+    .status-cancelled { background-color: #fee2e2; color: #991b1b; }
+    .notes-section {
+      background-color: #f9fafb;
+      border: 1px solid #e5e7eb;
+      border-radius: 6px;
+      padding: 15px;
+    }
+    .created-by {
+      font-style: italic;
+      color: #666;
+      text-align: right;
+      margin-top: 20px;
+      font-size: 12px;
+    }
+    @media print {
+      body { margin: 0; }
+      .no-print { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="company-name">ShadyPedidos</div>
+    <div class="order-title">Pedido #${order.id}</div>
+    <div style="margin-top: 10px; color: #666;">
+      ${new Date(order.created_at).toLocaleDateString("pt-BR", {
+        weekday: "long",
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      })}
     </div>
   </div>
-`,
-        )
-        .join("")}
-    </div>
 
-    <div class="section">
-      <div class="section-title">Informações do Pedido</div>
-      <div class="info-grid">
-        <div class="info-item">
-          <div class="info-label">Status</div>
-          <div class="info-value">
-            <span class="status-badge status-${order.status}">
-              ${getStatusText(order.status)}
-            </span>
-          </div>
-        </div>
-        <div class="info-item">
-          <div class="info-label">Data de Criação</div>
-          <div class="info-value">${new Date(order.created_at).toLocaleDateString("pt-BR")}</div>
-        </div>
+  <div class="section">
+    <div class="section-title">Dados do Cliente</div>
+    <div class="info-grid">
+      <div class="info-item">
+        <div class="info-label">Razão Social</div>
+        <div class="info-value">${order.customer?.razao_social || "N/A"}</div>
+      </div>
+      <div class="info-item">
+        <div class="info-label">Email</div>
+        <div class="info-value">${order.customer?.email || "N/A"}</div>
+      </div>
+      <div class="info-item">
+        <div class="info-label">CNPJ</div>
+        <div class="info-value">${order.customer?.cnpj || "Não informado"}</div>
+      </div>
+      <div class="info-item">
+        <div class="info-label">Telefone</div>
+        <div class="info-value">${order.customer?.telefone || "Não informado"}</div>
       </div>
     </div>
-
     ${
-      order.notes
+      order.customer?.endereco
         ? `
-      <div class="section">
-        <div class="section-title">Observações</div>
-        <div class="notes-section">
-          ${order.notes}
-        </div>
+      <div class="info-item">
+        <div class="info-label">Endereço</div>
+        <div class="info-value">${order.customer.endereco}</div>
       </div>
     `
         : ""
     }
+  </div>
 
-    <div class="total-section">
-      <div style="font-size: 18px; margin-bottom: 5px;">Total do Pedido:</div>
-      <div class="total-amount">R$ ${order.total.toFixed(2)}</div>
+  <div class="section">
+    <div class="section-title">Produtos do Pedido</div>
+    ${Object.values(groupedItems)
+      .map(
+        (group: any) => `
+<div class="product-item">
+  ${
+    group.product?.foto_url
+      ? `
+    <img src="${group.product.foto_url}" alt="${group.product.referencia}" class="product-image" />
+  `
+      : `
+    <div class="product-image" style="background-color: #f3f4f6; display: flex; align-items: center; justify-content: center; color: #9ca3af; font-size: 12px;">
+      Sem foto
     </div>
-
-    <div class="created-by">
-      Pedido criado por: ${order.user?.name || "Usuário não identificado"}
+  `
+  }
+  <div class="product-details">
+    <div class="product-name">${group.product?.referencia || "Produto não encontrado"}</div>
+    <div style="color: #666; font-size: 14px; margin-bottom: 8px;">
+      Preço unitário: R$ ${group.sizes[0]?.unitPrice?.toFixed(2) || "0.00"}
     </div>
+    ${
+      group.productNotes
+        ? `
+      <div style="background-color: #f9fafb; border: 1px solid #e5e7eb; border-radius: 4px; padding: 8px; margin: 8px 0; font-size: 12px; font-style: italic;">
+        <strong>Obs:</strong> ${group.productNotes}
+      </div>
+    `
+        : ""
+    }
+    <div class="sizes-grid">
+      ${group.sizes
+        .map(
+          (size: any) => `
+        <div class="size-item">
+          <span class="size-number">${size.size}</span>
+          <span class="size-qty">${size.quantity}x</span>
+        </div>
+      `,
+        )
+        .join("")}
+    </div>
+    <div class="product-total">
+      Total: R$ ${group.totalValue.toFixed(2)} (${group.totalQuantity} ${group.totalQuantity === 1 ? "item" : "itens"})
+    </div>
+  </div>
+</div>
+`,
+      )
+      .join("")}
+  </div>
 
-    <script>
-      window.onload = function() {
-        window.print();
-        window.onafterprint = function() {
-          window.close();
-        };
+  <div class="section">
+    <div class="section-title">Informações do Pedido</div>
+    <div class="info-grid">
+      <div class="info-item">
+        <div class="info-label">Status</div>
+        <div class="info-value">
+          <span class="status-badge status-${order.status}">
+            ${getStatusText(order.status)}
+          </span>
+        </div>
+      </div>
+      <div class="info-item">
+        <div class="info-label">Data de Criação</div>
+        <div class="info-value">${new Date(order.created_at).toLocaleDateString("pt-BR")}</div>
+      </div>
+    </div>
+  </div>
+
+  ${
+    order.notes
+      ? `
+    <div class="section">
+      <div class="section-title">Observações</div>
+      <div class="notes-section">
+        ${order.notes}
+      </div>
+    </div>
+  `
+      : ""
+  }
+
+  <div class="total-section">
+    <div style="font-size: 18px; margin-bottom: 5px;">Total do Pedido:</div>
+    <div class="total-amount">R$ ${order.total.toFixed(2)}</div>
+  </div>
+
+  <div class="created-by">
+    Pedido criado por: ${order.user?.name || "Usuário não identificado"}
+  </div>
+
+  <script>
+    window.onload = function() {
+      window.print();
+      window.onafterprint = function() {
+        window.close();
       };
-    </script>
-  </body>
-  </html>
+    };
+  </script>
+</body>
+</html>
 `
 
     printWindow.document.write(printContent)
@@ -1123,28 +1117,31 @@ function ShadyPedidosApp() {
     setEditNotes(order.notes || "")
 
     // Converter order_items para o formato de edição
+    // Agrupar por produto E observações (produtos com observações diferentes ficam separados)
     const groupedItems =
       order.order_items?.reduce(
         (acc, item) => {
-          const productId = item.product_id
-          if (!acc[productId]) {
-            acc[productId] = {
-              productId,
+          // Criar uma chave única que combina product_id e product_notes
+          const groupKey = `${item.product_id}_${item.product_notes || "no_notes"}`
+
+          if (!acc[groupKey]) {
+            acc[groupKey] = {
+              productId: item.product_id,
               productName: item.product?.referencia || "Produto não encontrado",
               unitPrice: item.unit_price,
               sizes: [],
               totalQuantity: 0,
-              productNotes: item.product_notes || undefined, // Adicionar esta linha
+              productNotes: item.product_notes || undefined,
             }
           }
-          acc[productId].sizes.push({
+          acc[groupKey].sizes.push({
             size: item.size_number,
             quantity: item.quantity,
           })
-          acc[productId].totalQuantity += item.quantity
+          acc[groupKey].totalQuantity += item.quantity
           return acc
         },
-        {} as Record<number, any>,
+        {} as Record<string, any>,
       ) || {}
 
     setEditOrderItems(Object.values(groupedItems))
@@ -1170,13 +1167,13 @@ function ShadyPedidosApp() {
       unitPrice: selectedProduct.preco,
       sizes,
       totalQuantity,
-      productNotes: editCurrentProductNotes || undefined, // Adicionar esta linha
+      productNotes: editCurrentProductNotes || undefined,
     }
 
     setEditOrderItems((prev) => [...prev, newOrderItem])
     setEditSelectedProductId("")
     setEditSizeQuantities({})
-    setEditCurrentProductNotes("") // Adicionar esta linha
+    setEditCurrentProductNotes("")
 
     toast({
       title: "Produto adicionado",
@@ -1224,7 +1221,7 @@ function ShadyPedidosApp() {
           size_number: sizeItem.size,
           quantity: sizeItem.quantity,
           unit_price: item.unitPrice,
-          product_notes: item.productNotes || null, // Adicionar esta linha
+          product_notes: item.productNotes || null,
         })),
       )
 
@@ -1486,7 +1483,7 @@ function ShadyPedidosApp() {
                           </div>
                         ))}
                       </div>
-                      {/* Adicionar campo de observações do produto */}
+                      {/* Campo de observações do produto */}
                       <div className="space-y-2">
                         <Label htmlFor="productNotes" className="text-white">
                           Observações do Produto (opcional)
@@ -1522,7 +1519,7 @@ function ShadyPedidosApp() {
                               <div>
                                 <h4 className="font-medium text-white">{item.productName}</h4>
                                 <p className="text-sm text-zinc-400">Preço unitário: R$ {item.unitPrice.toFixed(2)}</p>
-                                {/* Adicionar exibição das observações do produto */}
+                                {/* Exibição das observações do produto */}
                                 {item.productNotes && (
                                   <p className="text-sm text-zinc-300 mt-1 italic">Obs: {item.productNotes}</p>
                                 )}
@@ -1597,7 +1594,7 @@ function ShadyPedidosApp() {
               </Button>
             </div>
 
-            {/* Adicionar barra de pesquisa para clientes */}
+            {/* Barra de pesquisa para clientes */}
             <div className="relative">
               <Input
                 type="text"
@@ -1647,8 +1644,6 @@ function ShadyPedidosApp() {
                           {customer.email} • Cliente desde {new Date(customer.created_at).toLocaleDateString("pt-BR")}
                         </CardDescription>
                       </div>
-                      {/* Adicionar botão de edição na lista de clientes (linha ~1000, dentro do mapeamento de clientes)
-                      // Modificar a div que contém os botões de visualização e exclusão: */}
 
                       <div className="flex space-x-2">
                         <Button
@@ -1714,7 +1709,7 @@ function ShadyPedidosApp() {
                 </Button>
               </div>
 
-              {/* Adicionar barra de pesquisa para produtos */}
+              {/* Barra de pesquisa para produtos */}
               <div className="relative">
                 <Input
                   type="text"
@@ -2263,7 +2258,7 @@ function ShadyPedidosApp() {
                           <span className="text-zinc-400 ml-2">
                             {item.quantity}x R$ {item.unit_price.toFixed(2)}
                           </span>
-                          {/* Adicionar exibição das observações do produto na visualização */}
+                          {/* Exibição das observações do produto na visualização */}
                           {item.product_notes && (
                             <div className="text-sm text-zinc-300 mt-1 italic">Obs: {item.product_notes}</div>
                           )}
@@ -2283,7 +2278,6 @@ function ShadyPedidosApp() {
                 {selectedOrder.notes && (
                   <div>
                     <h3 className="font-medium mb-2 text-white">Observações</h3>
-
                     <div className="bg-zinc-700 p-4 rounded-lg">{selectedOrder.notes}</div>
                   </div>
                 )}
@@ -2454,7 +2448,7 @@ function ShadyPedidosApp() {
                           <div>
                             <h4 className="font-medium text-white">{item.productName}</h4>
                             <p className="text-sm text-zinc-400">Preço unitário: R$ {item.unitPrice.toFixed(2)}</p>
-                            {/* Adicionar exibição das observações do produto na edição */}
+                            {/* Exibição das observações do produto na edição */}
                             {item.productNotes && (
                               <p className="text-sm text-zinc-300 mt-1 italic">Obs: {item.productNotes}</p>
                             )}
@@ -2533,7 +2527,7 @@ function ShadyPedidosApp() {
                           ))}
                         </div>
 
-                        {/* Adicionar campo de observações do produto na edição */}
+                        {/* Campo de observações do produto na edição */}
                         <div className="space-y-2">
                           <Label htmlFor="editProductNotes" className="text-white">
                             Observações do Produto (opcional)
@@ -2547,6 +2541,14 @@ function ShadyPedidosApp() {
                             className="bg-zinc-800 border-zinc-700 text-white placeholder:text-zinc-500 rounded-lg"
                           />
                         </div>
+
+                        {Object.values(editSizeQuantities).some((qty) => qty > 0) && (
+                          <div className="mt-4">
+                            <Button onClick={addProductToEditOrder} className="bg-zinc-700 hover:bg-zinc-600 w-full">
+                              Adicionar ao Pedido
+                            </Button>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
@@ -2588,8 +2590,6 @@ function ShadyPedidosApp() {
           )}
         </DialogContent>
       </Dialog>
-
-      {/* Adicionar o diálogo de edição de cliente após o diálogo de criação de cliente (linha ~1800) */}
 
       {/* Edit Customer Dialog */}
       <Dialog open={isEditCustomerDialogOpen} onOpenChange={setIsEditCustomerDialogOpen}>

@@ -30,7 +30,7 @@ CREATE TABLE IF NOT EXISTS customers (
   razao_social VARCHAR(255) NOT NULL,
   endereco TEXT,
   cnpj VARCHAR(20) UNIQUE,
-  email VARCHAR(255) NOT NULL,
+  email VARCHAR(255) NOT NULL, -- Email não precisa ser único
   telefone VARCHAR(20),
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
