@@ -66,6 +66,7 @@ CREATE TABLE IF NOT EXISTS order_items (
   size_number INTEGER NOT NULL,
   quantity INTEGER NOT NULL,
   unit_price DECIMAL(10, 2) NOT NULL,
+  product_notes TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 

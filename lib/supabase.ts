@@ -107,6 +107,7 @@ export type Database = {
           quantity: number
           unit_price: number
           created_at: string
+          product_notes: string | null
         }
         Insert: {
           id?: number
@@ -116,6 +117,7 @@ export type Database = {
           quantity: number
           unit_price: number
           created_at?: string
+          product_notes?: string | null
         }
         Update: {
           id?: number
@@ -125,6 +127,7 @@ export type Database = {
           quantity?: number
           unit_price?: number
           created_at?: string
+          product_notes?: string | null
         }
       }
       users: {

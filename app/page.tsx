@@ -48,6 +48,7 @@ interface OrderItem {
   quantity: number
   unit_price: number
   created_at: string
+  product_notes?: string | null // Adicionar esta linha
   product?: Product
 }
 
@@ -131,6 +132,7 @@ function ShadyPedidosApp() {
       unitPrice: number
       sizes: Array<{ size: number; quantity: number }>
       totalQuantity: number
+      productNotes?: string // Adicionar esta linha
     }>
   >([])
   const [notes, setNotes] = useState("Previsão de entrega xx/xx/xxxx\nCondição de pagamento xx-xx-xx")
@@ -145,6 +147,7 @@ function ShadyPedidosApp() {
       unitPrice: number
       sizes: Array<{ size: number; quantity: number }>
       totalQuantity: number
+      productNotes?: string // Adicionar esta linha
     }>
   >([])
   const [editSelectedProductId, setEditSelectedProductId] = useState("")
@@ -159,6 +162,12 @@ function ShadyPedidosApp() {
   // Adicione um novo estado para o termo de pesquisa de clientes após o estado `productSearchTerm` (por volta da linha 115):
   const [clientSearchTerm, setClientSearchTerm] = useState("")
   const [ordersSearchTerm, setOrdersSearchTerm] = useState("")
+
+  // Adicionar após os outros estados de criação de pedido (por volta da linha 90)
+  const [currentProductNotes, setCurrentProductNotes] = useState("")
+
+  // Adicionar após os outros estados de edição de pedido (por volta da linha 110)
+  const [editCurrentProductNotes, setEditCurrentProductNotes] = useState("")
 
   // Load customers from database
   const loadCustomers = async () => {
@@ -626,6 +635,7 @@ function ShadyPedidosApp() {
       unitPrice: selectedProduct.preco,
       sizes,
       totalQuantity,
+      productNotes: currentProductNotes || undefined, // Adicionar esta linha
     }
 
     setOrderItems((prev) => [...prev, newOrderItem])
@@ -633,6 +643,7 @@ function ShadyPedidosApp() {
     // Reset selections
     setSelectedProductId("")
     setSizeQuantities({})
+    setCurrentProductNotes("") // Adicionar esta linha
 
     toast({
       title: "Produto adicionado",
@@ -681,6 +692,7 @@ function ShadyPedidosApp() {
           size_number: sizeItem.size,
           quantity: sizeItem.quantity,
           unit_price: item.unitPrice,
+          product_notes: item.productNotes || null, // Adicionar esta linha
         })),
       )
 
@@ -784,6 +796,7 @@ function ShadyPedidosApp() {
               sizes: [],
               totalQuantity: 0,
               totalValue: 0,
+              productNotes: item.product_notes, // Adicionar as observações do produto
             }
           }
           acc[productId].sizes.push({
@@ -971,7 +984,7 @@ function ShadyPedidosApp() {
           <div class="info-value">${order.customer?.razao_social || "N/A"}</div>
         </div>
         <div class="info-item">
-          <div class="info-label">Email</div>
+          <div class="info-label">Email
           <div class="info-value">${order.customer?.email || "N/A"}</div>
         </div>
         <div class="info-item">
@@ -1000,41 +1013,50 @@ function ShadyPedidosApp() {
       ${Object.values(groupedItems)
         .map(
           (group: any) => `
-        <div class="product-item">
-          ${
-            group.product?.foto_url
-              ? `
-            <img src="${group.product.foto_url}" alt="${group.product.referencia}" class="product-image" />
-          `
-              : `
-            <div class="product-image" style="background-color: #f3f4f6; display: flex; align-items: center; justify-content: center; color: #9ca3af; font-size: 12px;">
-              Sem foto
-            </div>
-          `
-          }
-          <div class="product-details">
-            <div class="product-name">${group.product?.referencia || "Produto não encontrado"}</div>
-            <div style="color: #666; font-size: 14px; margin-bottom: 8px;">
-              Preço unitário: R$ ${group.sizes[0]?.unitPrice?.toFixed(2) || "0.00"}
-            </div>
-            <div class="sizes-grid">
-              ${group.sizes
-                .map(
-                  (size: any) => `
-                <div class="size-item">
-                  <span class="size-number">${size.size}</span>
-                  <span class="size-qty">${size.quantity}x</span>
-                </div>
-              `,
-                )
-                .join("")}
-            </div>
-            <div class="product-total">
-              Total: R$ ${group.totalValue.toFixed(2)} (${group.totalQuantity} ${group.totalQuantity === 1 ? "item" : "itens"})
-            </div>
-          </div>
+  <div class="product-item">
+    ${
+      group.product?.foto_url
+        ? `
+      <img src="${group.product.foto_url}" alt="${group.product.referencia}" class="product-image" />
+    `
+        : `
+      <div class="product-image" style="background-color: #f3f4f6; display: flex; align-items: center; justify-content: center; color: #9ca3af; font-size: 12px;">
+        Sem foto
+      </div>
+    `
+    }
+    <div class="product-details">
+      <div class="product-name">${group.product?.referencia || "Produto não encontrado"}</div>
+      <div style="color: #666; font-size: 14px; margin-bottom: 8px;">
+        Preço unitário: R$ ${group.sizes[0]?.unitPrice?.toFixed(2) || "0.00"}
+      </div>
+      ${
+        group.productNotes
+          ? `
+        <div style="background-color: #f9fafb; border: 1px solid #e5e7eb; border-radius: 4px; padding: 8px; margin: 8px 0; font-size: 12px; font-style: italic;">
+          <strong>Obs:</strong> ${group.productNotes}
         </div>
-      `,
+      `
+          : ""
+      }
+      <div class="sizes-grid">
+        ${group.sizes
+          .map(
+            (size: any) => `
+          <div class="size-item">
+            <span class="size-number">${size.size}</span>
+            <span class="size-qty">${size.quantity}x</span>
+          </div>
+        `,
+          )
+          .join("")}
+      </div>
+      <div class="product-total">
+        Total: R$ ${group.totalValue.toFixed(2)} (${group.totalQuantity} ${group.totalQuantity === 1 ? "item" : "itens"})
+      </div>
+    </div>
+  </div>
+`,
         )
         .join("")}
     </div>
@@ -1112,6 +1134,7 @@ function ShadyPedidosApp() {
               unitPrice: item.unit_price,
               sizes: [],
               totalQuantity: 0,
+              productNotes: item.product_notes || undefined, // Adicionar esta linha
             }
           }
           acc[productId].sizes.push({
@@ -1147,11 +1170,13 @@ function ShadyPedidosApp() {
       unitPrice: selectedProduct.preco,
       sizes,
       totalQuantity,
+      productNotes: editCurrentProductNotes || undefined, // Adicionar esta linha
     }
 
     setEditOrderItems((prev) => [...prev, newOrderItem])
     setEditSelectedProductId("")
     setEditSizeQuantities({})
+    setEditCurrentProductNotes("") // Adicionar esta linha
 
     toast({
       title: "Produto adicionado",
@@ -1199,6 +1224,7 @@ function ShadyPedidosApp() {
           size_number: sizeItem.size,
           quantity: sizeItem.quantity,
           unit_price: item.unitPrice,
+          product_notes: item.productNotes || null, // Adicionar esta linha
         })),
       )
 
@@ -1460,6 +1486,20 @@ function ShadyPedidosApp() {
                           </div>
                         ))}
                       </div>
+                      {/* Adicionar campo de observações do produto */}
+                      <div className="space-y-2">
+                        <Label htmlFor="productNotes" className="text-white">
+                          Observações do Produto (opcional)
+                        </Label>
+                        <Textarea
+                          id="productNotes"
+                          value={currentProductNotes}
+                          onChange={(e) => setCurrentProductNotes(e.target.value)}
+                          placeholder="Observações específicas para este produto..."
+                          rows={2}
+                          className="bg-zinc-800 border-zinc-700 text-white placeholder:text-zinc-500 rounded-lg"
+                        />
+                      </div>
                       {Object.values(sizeQuantities).some((qty) => qty > 0) && (
                         <div className="mt-4">
                           <Button onClick={addProductToOrder} className="bg-zinc-700 hover:bg-zinc-600 w-full">
@@ -1482,6 +1522,10 @@ function ShadyPedidosApp() {
                               <div>
                                 <h4 className="font-medium text-white">{item.productName}</h4>
                                 <p className="text-sm text-zinc-400">Preço unitário: R$ {item.unitPrice.toFixed(2)}</p>
+                                {/* Adicionar exibição das observações do produto */}
+                                {item.productNotes && (
+                                  <p className="text-sm text-zinc-300 mt-1 italic">Obs: {item.productNotes}</p>
+                                )}
                               </div>
                               <Button
                                 variant="ghost"
@@ -2211,14 +2255,18 @@ function ShadyPedidosApp() {
                   <h3 className="font-medium mb-2 text-white">Itens do Pedido</h3>
                   <div className="space-y-2">
                     {selectedOrder.order_items?.map((item) => (
-                      <div key={item.id} className="flex justify-between items-center p-3 bg-zinc-700 rounded-lg">
-                        <div>
+                      <div key={item.id} className="flex justify-between items-start p-3 bg-zinc-700 rounded-lg">
+                        <div className="flex-1">
                           <span className="font-medium text-white">
                             {item.product?.referencia} - Tamanho {item.size_number}
                           </span>
                           <span className="text-zinc-400 ml-2">
                             {item.quantity}x R$ {item.unit_price.toFixed(2)}
                           </span>
+                          {/* Adicionar exibição das observações do produto na visualização */}
+                          {item.product_notes && (
+                            <div className="text-sm text-zinc-300 mt-1 italic">Obs: {item.product_notes}</div>
+                          )}
                         </div>
                         <span className="font-medium text-white">
                           R$ {(item.quantity * item.unit_price).toFixed(2)}
@@ -2406,6 +2454,10 @@ function ShadyPedidosApp() {
                           <div>
                             <h4 className="font-medium text-white">{item.productName}</h4>
                             <p className="text-sm text-zinc-400">Preço unitário: R$ {item.unitPrice.toFixed(2)}</p>
+                            {/* Adicionar exibição das observações do produto na edição */}
+                            {item.productNotes && (
+                              <p className="text-sm text-zinc-300 mt-1 italic">Obs: {item.productNotes}</p>
+                            )}
                           </div>
                           <Button
                             variant="ghost"
@@ -2480,13 +2532,21 @@ function ShadyPedidosApp() {
                             </div>
                           ))}
                         </div>
-                        {Object.values(editSizeQuantities).some((qty) => qty > 0) && (
-                          <div className="mt-4">
-                            <Button onClick={addProductToEditOrder} className="bg-zinc-700 hover:bg-zinc-600 w-full">
-                              Adicionar ao Pedido
-                            </Button>
-                          </div>
-                        )}
+
+                        {/* Adicionar campo de observações do produto na edição */}
+                        <div className="space-y-2">
+                          <Label htmlFor="editProductNotes" className="text-white">
+                            Observações do Produto (opcional)
+                          </Label>
+                          <Textarea
+                            id="editProductNotes"
+                            value={editCurrentProductNotes}
+                            onChange={(e) => setEditCurrentProductNotes(e.target.value)}
+                            placeholder="Observações específicas para este produto..."
+                            rows={2}
+                            className="bg-zinc-800 border-zinc-700 text-white placeholder:text-zinc-500 rounded-lg"
+                          />
+                        </div>
                       </div>
                     )}
                   </div>
